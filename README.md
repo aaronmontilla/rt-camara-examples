@@ -57,6 +57,6 @@ Ready-to-import API collections for [Insomnia](https://insomnia.rest/):
 
 #### Dedicated Networks
 
-A Python MCP server exposing the four CAMARA Dedicated Networks APIs (Networks, Network Profiles, Device Accesses and Service Areas) as **12 tools**, plus **4 guided workflow prompts**. It lets an assistant discover profiles and service areas, reserve and monitor dedicated networks, and grant or revoke device access through natural language.
+A Python MCP server exposing the four CAMARA Dedicated Networks APIs (Networks, Network Profiles, Device Accesses and Service Areas) as **12 tools**, plus **4 guided workflow prompts**. It lets an assistant discover profiles and service areas, reserve and monitor dedicated networks, and grant or revoke device access through natural language. Service areas are returned with a [geojson.io](https://geojson.io) link so they can be viewed on a map.
 
 See the [server README](./mcp-servers/dedicated-networks/README.md) for installation and configuration instructions.

@@ -49,14 +49,16 @@ REQUESTED → GRANTED
 
 ## Tools
 
-This server exposes **12 tools** across four functional groups.
+This server exposes **12 tools** across four functional groups. Service areas come with a
+GeoJSON URL for viewing them on a map. (A 13th tool, `camara_pick_location`, an interactive
+map, is temporarily disabled.)
 
 | Tool | Group | What it does |
 |------|-------|-------------|
 | `camara_list_profiles` | Profiles | List available network profiles |
 | `camara_get_profile` | Profiles | Get details of a specific profile |
-| `camara_retrieve_service_areas` | Areas | Search geographic service areas |
-| `camara_get_area` | Areas | Get details of a specific service area |
+| `camara_retrieve_service_areas` | Areas | Search geographic service areas (with GeoJSON URLs) |
+| `camara_get_area` | Areas | Get details of a specific service area (with GeoJSON URL) |
 | `camara_list_networks` | Networks | List all your dedicated networks |
 | `camara_get_network` | Networks | Get status/details of one network |
 | `camara_create_network` | Networks | Create a new dedicated network |
@@ -72,6 +74,8 @@ This server exposes **12 tools** across four functional groups.
 
 - **Python 3.10 or newer**
 - **pip** (Python's package manager)
+- **Node.js 20+ and npm** — *optional*; only needed to build the
+  `camara_pick_location` map view if you re-enable it (currently disabled)
 
 ---
 
@@ -93,7 +97,21 @@ This installs three packages:
 - `httpx` — the async HTTP client (makes API calls)
 - `pydantic` — validates the inputs Claude sends to each tool
 
-### 3. Test that it runs
+### 3. Build the map view (optional — map picker currently disabled)
+
+Only needed if you re-enable the map picker (`ENABLE_MAP_PICKER = True` in
+`server.py`); skip it otherwise.
+
+```bash
+cd ui/area-picker
+npm install
+npm run build
+cd ../..
+```
+
+Details in [Interactive Map Picker](#interactive-map-picker-mcp-apps--temporarily-disabled).
+
+### 4. Test that it runs
 
 ```bash
 python server.py
@@ -183,6 +201,7 @@ Restart OpenCode (or run `opencode` again) to pick up the new server. Tools then
 |----------|-------------|---------|
 | `CAMARA_API_ROOT` | Base URL of your CAMARA API server | `http://localhost:9091` |
 | `CAMARA_ACCESS_TOKEN` | Bearer token for authentication | *(empty — no auth header sent)* |
+| `CAMARA_MAP_TILE_URL` | XYZ tile URL template for the `camara_pick_location` map (only used if the map picker is re-enabled) | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` |
 
 ---
 
@@ -390,7 +409,7 @@ Searches for service areas using geographic and/or profile filters. All filters 
 | `byQosProfileName` | string | No | Only areas supporting this QoS profile name. |
 | `response_format` | `markdown` \| `json` | No | Output format. Default: `markdown`. |
 
-**Returns** — Each area contains `id`, `name`, `description`, `area` geometry, `networkProfiles`, and `qosProfiles`.
+**Returns** — Each area contains `id`, `name`, `description`, `area` geometry, `networkProfiles`, and `qosProfiles`, plus a geojson.io URL to view it (see [Visualizing service areas](#visualizing-service-areas-geojson)).
 
 ---
 
@@ -404,6 +423,113 @@ Fetches the full details of a single service area by UUID.
 | `response_format` | `markdown` \| `json` | No | Output format. Default: `markdown`. |
 
 **Errors** — `404` Area not found.
+
+---
+
+#### `camara_pick_location` (temporarily disabled)
+
+> **Disabled:** this tool is not registered while `ENABLE_MAP_PICKER = False`
+> in `server.py`. Use the GeoJSON URLs returned by the area tools instead
+> (see [Visualizing service areas](#visualizing-service-areas-geojson)).
+
+Opens an interactive map (see [Interactive Map Picker](#interactive-map-picker-mcp-apps)
+below) so the user can point at a location instead of typing coordinates.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `latitude` | number | No | Initial map center latitude. Omit to fit all areas. |
+| `longitude` | number | No | Initial map center longitude. Omit to fit all areas. |
+| `zoom` | integer (0-22) | No | Initial map zoom level. Omit to fit all areas. |
+| `byNetworkProfileId` | string (UUID) | No | Only show areas supporting this network profile. |
+| `byQosProfileName` | string | No | Only show areas supporting this QoS profile name. |
+
+Returns JSON with `areas`, a computed `bounds` bounding box, `tileUrl`, and
+`center`/`zoom` (only echoed back if the caller passed them). The chosen
+location and `serviceAreaId` arrive later as a follow-up user message once
+the user confirms a selection on the map — this tool does not return them
+directly.
+
+---
+
+## Visualizing service areas (GeoJSON)
+
+Every time a service area is returned, the server also generates a
+[geojson.io](https://geojson.io) URL that draws it on a map — no local build or
+map hosting needed. The GeoJSON is embedded in the URL itself.
+
+| Tool | Where the URL appears |
+|---|---|
+| `camara_get_area` | Markdown: `GeoJSON map: [View area](…)` line. JSON: `geojsonUrl` field on the area. |
+| `camara_retrieve_service_areas` | Markdown: one link per area. JSON: `geojsonUrl` on each area, plus a top-level `geojsonUrl` showing **all** returned areas together. |
+
+Notes:
+- GeoJSON has no circle type, so `CIRCLE` areas are approximated by a 64-point polygon.
+- Areas with missing or malformed geometry get no URL.
+- Areas with many vertices produce long URLs (the whole GeoJSON is in the link).
+
+---
+
+## Interactive Map Picker (MCP Apps) — temporarily disabled
+
+> **Status:** disabled because the map does not yet work as required. The code
+> (`camara/ui.py`, `camara/tools/picker.py`, `ui/`) is kept intact. To re-enable
+> it, set `ENABLE_MAP_PICKER = True` in `server.py`; the tool count then goes
+> from 12 back to 13. Building the view (below) is only needed in that case.
+
+`camara_pick_location` opens an interactive Leaflet map inside the chat (via
+the [MCP Apps](https://modelcontextprotocol.io/specification/draft/extensions/apps)
+extension, `io.modelcontextprotocol/ui`) so the user can point at a location
+instead of typing coordinates:
+
+1. The map opens showing every available service area, dimmed.
+2. Clicking a point calls `camara_retrieve_service_areas` (with `atLocation`)
+   and highlights the areas covering it, in a side panel ordered from the
+   smallest (most specific) to the largest.
+3. An optional "draw a circle" mode (checkbox above the panel) lets the user
+   click-and-drag instead, querying with `overlappingArea` rather than
+   `atLocation`.
+4. Clicking "Usar esta área" sends the chosen coordinates, `serviceAreaId`,
+   name, and available profiles back into the conversation — continue from
+   there with `camara_list_profiles` and `camara_create_network`.
+
+### Building the view
+
+The map is a small Vite + Leaflet project at `ui/area-picker/`, bundled with
+[`vite-plugin-singlefile`](https://github.com/richardtallent/vite-plugin-singlefile)
+into one self-contained HTML file (Leaflet and the MCP Apps client SDK
+inlined, no CDN). **It must be built before starting the server**, or
+`camara_pick_location`'s map resource will fail to read:
+
+```bash
+cd ui/area-picker
+npm install
+npm run build
+```
+
+This writes `ui/dist/area_picker.html`, which `camara/ui.py` serves as the
+`ui://camara/area-picker` resource. If you don't rebuild after editing
+`ui/area-picker/src/`, the server keeps serving the previous build — there's
+no watch step wired into `python server.py`.
+
+`ui/dist/` is **not** committed (it's covered by the root `.gitignore`'s
+`dist/` rule) — it's a regenerated build artifact, and Leaflet + the MCP Apps
+SDK bundled in make it a few hundred KB, not worth tracking in git.
+
+### Tile server
+
+Map tiles come from `CAMARA_MAP_TILE_URL` (see
+[Environment variables](#environment-variables)), an XYZ template like
+`https://tile.openstreetmap.org/{z}/{x}/{y}.png`. Its hostname is the only
+external origin the view's Content-Security-Policy allows — tiles load as
+`<img>` sources, so it's declared under the resource's `resourceDomains`
+(not `connectDomains`).
+
+### Known issue
+
+There's an open upstream issue (`ext-apps` #671) about MCP Apps UIs not
+rendering in Claude Desktop for Windows when going through the `mcp-remote`
+proxy. If the tool runs but no map appears, try connecting directly instead
+of through `mcp-remote` before assuming the view itself is broken.
 
 ---
 
@@ -456,6 +582,9 @@ camara/
   client.py                 Shared async HTTP client (_api_request, _handle_error).
   models.py                 Pydantic input models shared across tools.
   formatters.py             Turns API JSON responses into readable Markdown.
+  geo.py                    Geometry helpers: bounding boxes and GeoJSON /
+                            geojson.io URL generation for service areas.
+  ui.py, tools/picker.py    Interactive map picker (currently disabled).
   prompts.py                Registers the four workflow guidance prompts.
   tools/
     networks.py             camara_list_networks, camara_get_network,
@@ -464,6 +593,11 @@ camara/
     accesses.py             camara_list_accesses, camara_get_access,
                             camara_create_access, camara_delete_access
     areas.py                camara_retrieve_service_areas, camara_get_area
+docs/
+  dedicated-network.yaml              OpenAPI spec — Networks API
+  dedicated-network-profiles.yaml     OpenAPI spec — Network Profiles API
+  dedicated-network-accesses.yaml     OpenAPI spec — Device Accesses API
+  dedicated-network-areas.yaml        OpenAPI spec — Service Areas API
 ```
 
 Each tool follows the same pattern:
