@@ -1,0 +1,191 @@
+@import "leaflet/dist/leaflet.css";
+
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #6b7280;
+  --border: #e2e2e2;
+  --panel-bg: #f8f8f8;
+  --accent: #2563eb;
+  --accent-fg: #ffffff;
+  --danger: #b91c1c;
+  --danger-bg: #fef2f2;
+}
+
+:root[data-theme="dark"] {
+  --bg: #1e1e1e;
+  --fg: #f2f2f2;
+  --muted: #9ca3af;
+  --border: #3a3a3a;
+  --panel-bg: #262626;
+  --accent: #3b82f6;
+  --accent-fg: #0b0b0b;
+  --danger: #f87171;
+  --danger-bg: #3a1f1f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --bg: #1e1e1e;
+    --fg: #f2f2f2;
+    --muted: #9ca3af;
+    --border: #3a3a3a;
+    --panel-bg: #262626;
+    --accent: #3b82f6;
+    --accent-fg: #0b0b0b;
+    --danger: #f87171;
+    --danger-bg: #3a1f1f;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  font-size: 14px;
+}
+
+#app {
+  display: flex;
+  height: 480px;
+  width: 100%;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+#map {
+  flex: 1 1 65%;
+  min-width: 0;
+  height: 100%;
+  background: var(--panel-bg);
+}
+
+#panel {
+  flex: 0 0 34%;
+  max-width: 320px;
+  height: 100%;
+  overflow-y: auto;
+  padding: 10px;
+  border-left: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+
+@media (max-width: 560px) {
+  #app {
+    flex-direction: column;
+    height: 620px;
+  }
+
+  #map {
+    flex: 0 0 320px;
+  }
+
+  #panel {
+    flex: 1 1 auto;
+    max-width: none;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+}
+
+#panel-controls {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0 0 8px 0;
+}
+
+.panel-error {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.area-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+  background: var(--bg);
+}
+
+.area-card.confirmed {
+  border-color: var(--accent);
+}
+
+.area-card h3 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+}
+
+.area-card .area-type {
+  display: inline-block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.area-card dl {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.area-card dt {
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.area-card dd {
+  margin: 0 0 4px 0;
+  word-break: break-all;
+}
+
+.area-card button {
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.area-card button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.area-card button.confirmed-label {
+  background: var(--muted);
+}
+
+.leaflet-container {
+  background: var(--panel-bg);
+  font-family: inherit;
+}

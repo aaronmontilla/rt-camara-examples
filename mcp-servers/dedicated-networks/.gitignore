@@ -18,6 +18,12 @@ dist/
 build/
 *.egg-info/
 
+# Node (ui/area-picker/)
+node_modules/
+
+# Test cache
+.pytest_cache/
+
 # Editor / OS clutter
 .DS_Store
 Thumbs.db

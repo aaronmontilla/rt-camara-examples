@@ -14,11 +14,18 @@ Call register_area_tools(mcp) once from server.py to activate both tools.
 import json
 from typing import Any, Dict, List
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer as FastMCP
 
 from camara.client import api_request, handle_error
 from camara.formatters import fmt_area
+from camara.geo import area_geojson_url, areas_to_geojson, geojson_url
 from camara.models import GetAreaInput, ResponseFormat, RetrieveAreasInput
+
+
+def _with_geojson_url(area: Dict[str, Any]) -> Dict[str, Any]:
+    """Copy of the area with a 'geojsonUrl' field (omitted if geometry is unusable)."""
+    url = area_geojson_url(area)
+    return {**area, "geojsonUrl": url} if url else area
 
 
 def register_area_tools(mcp: FastMCP) -> None:
@@ -90,7 +97,14 @@ def register_area_tools(mcp: FastMCP) -> None:
             )
 
             if params.response_format == ResponseFormat.JSON:
-                return json.dumps({"areas": areas, "count": len(areas)}, indent=2)
+                return json.dumps(
+                    {
+                        "areas": [_with_geojson_url(a) for a in areas],
+                        "count": len(areas),
+                        "geojsonUrl": geojson_url(areas_to_geojson(areas)),
+                    },
+                    indent=2,
+                )
 
             if not areas:
                 return "No service areas found matching the given criteria."
@@ -138,7 +152,7 @@ def register_area_tools(mcp: FastMCP) -> None:
             area: Dict[str, Any] = await api_request("areas", f"/areas/{params.areaId}")
 
             if params.response_format == ResponseFormat.JSON:
-                return json.dumps(area, indent=2)
+                return json.dumps(_with_geojson_url(area), indent=2)
             return f"# Network Service Area\n\n{fmt_area(area)}"
 
         except Exception as e:

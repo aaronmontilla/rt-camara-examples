@@ -18,6 +18,7 @@ Exported:
   GetProfileInput         — camara_get_profile
   RetrieveAreasInput      — camara_retrieve_service_areas
   GetAreaInput            — camara_get_area
+  PickLocationInput       — camara_pick_location
   ListNetworksInput       — camara_list_networks
   GetNetworkInput         — camara_get_network
   CreateNetworkInput      — camara_create_network
@@ -210,6 +211,30 @@ class GetAreaInput(BaseModel):
     response_format: ResponseFormat = Field(
         default=ResponseFormat.MARKDOWN,
         description="'markdown' or 'json'.",
+    )
+
+
+class PickLocationInput(BaseModel):
+    """All fields optional. Powers the ui://camara/area-picker map view."""
+    model_config = ConfigDict(validate_assignment=True, extra="forbid")
+
+    latitude: Optional[float] = Field(
+        None, ge=-90, le=90,
+        description="Initial map center latitude. Omit to let the map fit all areas.",
+    )
+    longitude: Optional[float] = Field(
+        None, ge=-180, le=180,
+        description="Initial map center longitude. Omit to let the map fit all areas.",
+    )
+    zoom: Optional[int] = Field(
+        None, ge=0, le=22,
+        description="Initial map zoom level (0-22). Omit to let the map fit all areas.",
+    )
+    byNetworkProfileId: Optional[str] = Field(
+        None, description="Only show areas that support this network profile UUID.",
+    )
+    byQosProfileName: Optional[str] = Field(
+        None, description="Only show areas that support this QoS profile name.",
     )
 
 

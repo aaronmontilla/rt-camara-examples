@@ -11,6 +11,8 @@ Environment variables:
                         Default: http://localhost:9091
   CAMARA_ACCESS_TOKEN   Bearer token for authentication
                         Default: "" (no Authorization header is sent)
+  CAMARA_MAP_TILE_URL   XYZ tile URL template for the area-picker map
+                        Default: https://tile.openstreetmap.org/{z}/{x}/{y}.png
 """
 
 import os
@@ -23,6 +25,10 @@ API_ROOT: str = os.environ.get("CAMARA_API_ROOT", "http://localhost:9091")
 # ─── Authentication token ──────────────────────────────────────────────────────
 # When set, every HTTP request carries  Authorization: Bearer <token>
 ACCESS_TOKEN: str = os.environ.get("CAMARA_ACCESS_TOKEN", "")
+
+# ─── Map tile server (used by the camara_pick_location UI resource) ───────────
+# XYZ tile template, e.g. https://tile.openstreetmap.org/{z}/{x}/{y}.png
+MAP_TILE_URL: str = os.environ.get("CAMARA_MAP_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png")
 
 # ─── Sub-API base paths ────────────────────────────────────────────────────────
 # Each path is appended to API_ROOT to form the full base URL for that API.

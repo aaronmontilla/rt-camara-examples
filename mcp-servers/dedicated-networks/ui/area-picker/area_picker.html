@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>CAMARA Service Area Picker</title>
+  </head>
+  <body>
+    <div id="app">
+      <div id="map" role="application" aria-label="Mapa de service areas"></div>
+      <aside id="panel" aria-live="polite">
+        <label id="panel-controls">
+          <input type="checkbox" id="draw-mode-toggle" />
+          Dibujar círculo (clic y arrastra en el mapa)
+        </label>
+        <div id="panel-mode-hint" class="hint">
+          Haz clic en el mapa para ver qué áreas cubren ese punto.
+        </div>
+        <div id="panel-error" class="panel-error" hidden></div>
+        <div id="panel-list"></div>
+      </aside>
+    </div>
+    <script type="module" src="/src/mcp-app.ts"></script>
+  </body>
+</html>

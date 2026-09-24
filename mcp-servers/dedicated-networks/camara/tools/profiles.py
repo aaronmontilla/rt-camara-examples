@@ -14,7 +14,7 @@ Call register_profile_tools(mcp) once from server.py to activate both tools.
 import json
 from typing import Any, Dict, List
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer as FastMCP
 
 from camara.client import api_request, handle_error
 from camara.formatters import fmt_profile

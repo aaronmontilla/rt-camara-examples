@@ -6,7 +6,7 @@ for the Dedicated Networks API.  These are *suggestions*, not hard constraints â
 the caller may skip, reorder, or combine steps as their use case requires.
 """
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer as FastMCP
 
 
 def register_prompts(mcp: FastMCP) -> None:  # noqa: C901

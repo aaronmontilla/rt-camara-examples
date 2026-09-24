@@ -1,0 +1,702 @@
+openapi: 3.0.3
+info:
+  title: Dedicated Network - Networks
+  description: |
+    This API allows for requesting a Dedicated Network, which provides a set of capabilities and connectivity performance targets. The Dedicated Network may be requested for a particular geographical location and at a particular time window. Depending on the requested start time for the dedicated network, the network may first enter a _reserved_ state.
+
+    # Authorization and authentication
+
+    The "Camara Security and Interoperability Profile" provides details of how an API consumer requests an access token. Please refer to Identity and Consent Management (https://github.com/camaraproject/IdentityAndConsentManagement/) for the released version of the profile.
+
+    The specific authorization flows to be used will be agreed upon during the onboarding process, happening between the API consumer and the API provider, taking into account the declared purpose for accessing the API, whilst also being subject to the prevailing legal framework dictated by local legislation.
+
+    In cases where personal data is processed by the API and users can exercise their rights through mechanisms such as opt-in and/or opt-out, the use of three-legged access tokens is mandatory. This ensures that the API remains in compliance with privacy regulations, upholding the principles of transparency and user-centric privacy-by-design.
+
+    # Creating a network
+
+    A network is created by performing a `POST` operation on the `/networks` endpoint.
+
+    The API Consumer needs to provide the following input parameters to create a network:
+
+    - the chosen Network Profile (networkProfileId) or QoS profile (qosProfileName). The choice is between a Network Profile (which contains properties like maximum number of devices, aggregated throughput, a list of supported QOS profiles, and a default QoS profile) and a QoS Profile which is equivalent to a simplified Network Profile for a single device, with just a default QoS profile, and with the aggregated throughput corresponding to the throughput defined by the QoS Profile.
+
+    - the Service Area (serviceAreaId)
+
+    - the service start and end times (Service Time).
+
+    - Optionally, callback related information through sink and sinkCredential parameters to receive notifications about the lifecycle events of the network.
+
+    The API returns a networkId. The networkId is a unique identifier of the network, which remains unchanged during its lifetime. The networkId is required when creating Device Accesses.
+
+    Initially, the created network is in `REQUESTED` state. The network is only usable when the network is in `ACTIVATED` state. Find a detailed description of the network states [here]().
+
+
+    # Querying one or more Networks
+
+    All available network of the API consumer can be queried by performing a `GET` operation on the `/networks` endpoint.
+
+    A specific network of the API consumer can be queried by performing a `GET` operation on the `/networks/{networkId}` endpoint, where the networkId has been obtained during the _create_ procedure.
+
+    # Deleting a Network
+
+    A specific network of the API consumer can be deleted by performing a `DELETE` operation on the `/networks/{networkId}` endpoint. Deletion of a network can be interpreted as a cancellation of the resource reservation.
+
+    # Additional CAMARA error responses
+
+    The list of error codes in this API specification is not exhaustive. Therefore the API specification may not document some non-mandatory error statuses as indicated in `CAMARA API Design Guide`.
+
+    Please refer to the `CAMARA_common.yaml` of the Commonalities Release associated to this API version for a complete list of error responses. The applicable Commonalities Release can be identified in the `API Readiness Checklist` document associated to this API version.
+
+    As a specific rule, error `501 - NOT_IMPLEMENTED` can be only a possible error response if it is explicitly documented in the API.
+
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  version: wip
+  x-camara-commonalities: 0.6
+externalDocs:
+  description: Product documentation at CAMARA
+  url: https://github.com/camaraproject/DedicatedNetworks
+servers:
+  - url: "{apiRoot}/dedicated-network/vwip"
+    variables:
+      apiRoot:
+        default: http://localhost:9091
+        description: API root, defined by the service provider, e.g. `api.example.com` or `api.example.com/somepath`
+tags:
+  - name: Networks
+    description: Manage a dedicated network
+paths:
+  /networks:
+    get:
+      tags:
+        - Networks
+      summary: Get a list of dedicated networks
+      operationId: listNetworks
+      security:
+        - openId:
+            - dedicated-network:networks:read
+      parameters:
+        - $ref: "#/components/parameters/x-correlator"
+      responses:
+        '200':
+          description: List of dedicated networks (the list can be empty)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NetworkInfo'
+        "400":
+          $ref: "#/components/responses/Generic400"
+        "401":
+          $ref: "#/components/responses/Generic401"
+        "403":
+          $ref: "#/components/responses/Generic403"
+
+    post:
+      tags:
+        - Networks
+      summary: Request to create a dedicated network
+      operationId: createNetwork
+      security:
+        - openId:
+            - dedicated-network:networks:create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNetwork'
+      parameters:
+        - $ref: "#/components/parameters/x-correlator"
+      callbacks:
+        notifications:
+          "{$request.body#/sink}":
+            post:
+              tags:
+                - Network status callback
+              summary: "Network status notifications callback"
+              description: |
+                Important: this endpoint is to be implemented by the API consumer.
+                It will be called upon change of the network request status.
+                Currently only NETWORK_STATUS_CHANGED event is defined.
+              operationId: postNotification
+              parameters:
+                - $ref: "#/components/parameters/x-correlator"
+              requestBody:
+                required: true
+                content:
+                  application/cloudevents+json:
+                    schema:
+                      $ref: "#/components/schemas/CloudEvent"
+                    examples:
+                      NETWORK_STATUS_CHANGED_EXAMPLE:
+                        $ref: "#/components/examples/NETWORK_STATUS_CHANGED_EXAMPLE"
+              responses:
+                "204":
+                  description: Successful notification
+                  headers:
+                    x-correlator:
+                      $ref: '#/components/headers/x-correlator'
+                "400":
+                  $ref: "#/components/responses/Generic400"
+                "401":
+                  $ref: "#/components/responses/Generic401"
+                "403":
+                  $ref: "#/components/responses/Generic403"
+                "410":
+                  $ref: "#/components/responses/Generic410"
+              security:
+                - {}
+                - notificationsBearerAuth: []
+      responses:
+        '201':
+          description: Reception acknowlegement a dedicated network request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkInfo'
+          headers:
+            Location:
+              description: 'URL including the resource identifier of the newly created dedicated network.'
+              required: true
+              schema:
+                type: string
+                format: uri
+        '400':
+          $ref: "#/components/responses/Generic400"
+        "401":
+          $ref: "#/components/responses/Generic401"
+        "403":
+          $ref: "#/components/responses/Generic403"
+
+  /networks/{networkId}:
+    get:
+      tags:
+        - Networks
+      summary: Get the current information about a dedicated network
+      operationId: readNetwork
+      security:
+        - openId:
+            - dedicated-network:networks:read
+      parameters:
+        - name: networkId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/NetworkId"
+        - $ref: "#/components/parameters/x-correlator"
+      responses:
+        '200':
+          description: Current dedicated network information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkInfo'
+        '400':
+          $ref: "#/components/responses/Generic400"
+        '404':
+          $ref: "#/components/responses/Generic404"
+    delete:
+      tags:
+        - Networks
+      summary: Delete a dedicated network
+      operationId: deleteNetwork
+      security:
+        - openId:
+            - dedicated-network:networks:delete
+      parameters:
+        - name: networkId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/NetworkId"
+        - $ref: "#/components/parameters/x-correlator"
+      responses:
+        '204':
+          description: Successful deletion of a dedicated network
+        "400":
+          $ref: "#/components/responses/Generic400"
+        "401":
+          $ref: "#/components/responses/Generic401"
+        "403":
+          $ref: "#/components/responses/Generic403"
+        "404":
+          $ref: "#/components/responses/Generic404"
+
+components:
+  securitySchemes:
+    openId:
+      type: openIdConnect
+      openIdConnectUrl: https://example.com/.well-known/openid-configuration
+    notificationsBearerAuth:
+      description: Bearer authentication for notifications
+      type: http
+      scheme: bearer
+      bearerFormat: "{$request.body#sinkCredential.credentialType}"
+
+  headers:
+    x-correlator:
+      description: Correlation id for the different services
+      schema:
+        $ref: "#/components/schemas/XCorrelator"
+  parameters:
+    x-correlator:
+      name: x-correlator
+      in: header
+      description: Correlation id for the different services
+      schema:
+        $ref: "#/components/schemas/XCorrelator"
+
+  schemas:
+    XCorrelator:
+      type: string
+      pattern: ^[a-zA-Z0-9-_:;.\/<>{}]{0,256}$
+      example: "b4333c46-49c0-4f62-80d7-f0ef930f1c46"
+
+    NetworkId:
+      description: Network id in UUID format
+      type: string
+      format: uuid
+
+    NetworkProfileId:
+      description: Network profile id in UUID format
+      type: string
+      format: uuid
+
+    QosProfileName:
+      description: |
+        A unique name for identifying a specific QoS profile.
+        This may follow different formats depending on the service providers implementation.
+        Some options addresses:
+          - A UUID style string
+          - Support for predefined profiles QOS_S, QOS_M, QOS_L, and QOS_E
+          - A searchable descriptive name
+        The set of QoS Profiles that an operator is offering can be retrieved by means of the QoS Profile API.
+      type: string
+      example: QCI_1_voice
+      minLength: 3
+      maxLength: 256
+      format: string
+      pattern: "^[a-zA-Z0-9_.-]+$"
+
+    ServiceAreaId:
+      type: string
+      format: uuid
+
+    BaseNetworkInfo:
+      description: Common attributes of a dedicated network
+      type: object
+      properties:
+        networkProfileId:
+          $ref: '#/components/schemas/NetworkProfileId'
+        qosProfileName:
+          $ref: '#/components/schemas/QosProfileName'
+        serviceTime:
+          $ref: '#/components/schemas/ServiceTime'
+        serviceAreaId:
+          $ref: '#/components/schemas/ServiceAreaId'
+        sink:
+          description: The address to which events shall be delivered using the selected protocol.
+          type: string
+          format: uri
+          pattern: ^https:\/\/.+$
+        sinkCredential:
+          $ref: '#/components/schemas/SinkCredential'
+      required:
+        - serviceTime
+        - serviceAreaId
+      oneOf:
+        - required:
+            - networkProfileId
+        - required:
+            - qosProfileName
+
+    NetworkInfo:
+      description: Current dedicated network information
+      allOf:
+        - $ref: "#/components/schemas/BaseNetworkInfo"
+        - type: object
+          properties:
+            id:
+              $ref: '#/components/schemas/NetworkId'
+            status:
+              $ref: '#/components/schemas/NetworkStatus'
+          required:
+            - id
+            - status
+
+    CreateNetwork:
+      description: Attributes required to create a dedicated network
+      # NOTE this design prepares for adding request specific attributes later
+      allOf:
+        - $ref: "#/components/schemas/BaseNetworkInfo"
+
+    NetworkStatus:
+      description: |
+        The current status of the requested network. The status can be one of the following:
+        * `REQUESTED` - The DN is requested, but not approved. Possible transitions to RESERVED, ACTIVATED and TERMINATED states
+        * `RESERVED` - Request is accepted by the CSP (CSP has committed the requested resources), but the Network cannot be used (outside of requested time-window)
+        * `ACTIVATED` - Network turns from reserved into Activated. Now, devices with access can use the network. Possible transitions to RESERVED or TERMINATED states
+        * `TERMINATED` - The Network resource is used and up for deletion. The API does not allow any action (except delete).
+
+      type: string
+      enum:
+        - REQUESTED
+        - RESERVED
+        - ACTIVATED
+        - TERMINATED
+
+    CloudEvent:
+      description: Event compliant with the CloudEvents specification
+      required:
+        - id
+        - source
+        - specversion
+        - type
+        - time
+      properties:
+        id:
+          description: Identifier of this event, that must be unique in the source context.
+          type: string
+        source:
+          description: Identifies the context in which an event happened in the specific Provider Implementation.
+          type: string
+          format: uri-reference
+        type:
+          description: The type of the event.
+          type: string
+          enum:
+            - "org.camaraproject.dedicated-network.v0.network-status-changed"
+        specversion:
+          description: Version of the specification to which this event conforms (must be 1.0 if it conforms to cloudevents 1.0.2 version)
+          type: string
+          enum:
+            - '1.0'
+        datacontenttype:
+          description: 'media-type that describes the event payload encoding, must be "application/json" for CAMARA APIs'
+          type: string
+          enum:
+            - 'application/json'
+        data:
+          description: Event notification details payload, which depends on the event type
+          type: object
+        time:
+          description: |
+            Timestamp of when the occurrence happened. It must follow RFC 3339
+          type: string
+          format: date-time
+      discriminator:
+        propertyName: 'type'
+        mapping:
+          org.camaraproject.dedicated-network.v0.network-status-changed: "#/components/schemas/EventNetworkStatusChanged"
+
+    EventNetworkStatusChanged:
+      description: Event to notify a network status change
+      type: object
+      properties:
+        data:
+          type: object
+          description: Status change details
+          required:
+            - networkId
+            - status
+          properties:
+            networkId:
+              $ref: "#/components/schemas/NetworkId"
+            status:
+              $ref: "#/components/schemas/NetworkStatus"
+      required:
+        - data
+
+    ServiceTime:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+          description: It must follow [RFC 3339](https://datatracker.ietf.org/doc/html/rfc3339#section-5.6) and must have time zone. Recommended format is yyyy-MM-dd'T'HH:mm:ss.SSSZ (i.e. which allows 2023-07-03T14:27:08.312+02:00 or 2023-07-03T12:27:08.312Z)
+        end:
+          type: string
+          format: date-time
+          description: It must follow [RFC 3339](https://datatracker.ietf.org/doc/html/rfc3339#section-5.6) and must have time zone. Recommended format is yyyy-MM-dd'T'HH:mm:ss.SSSZ (i.e. which allows 2023-07-03T14:27:08.312+02:00 or 2023-07-03T12:27:08.312Z)
+      required:
+        - start
+        - end
+
+    SinkCredential:
+      type: object
+      properties:
+        credentialType:
+          type: string
+          enum:
+            - PLAIN
+            - ACCESSTOKEN
+            - REFRESHTOKEN
+      discriminator:
+        propertyName: credentialType
+        mapping:
+          PLAIN: '#/components/schemas/PlainCredential'
+          ACCESSTOKEN: '#/components/schemas/AccessTokenCredential'
+          REFRESHTOKEN: '#/components/schemas/RefreshTokenCredential'
+      required:
+        - credentialType
+
+    PlainCredential:
+      type: object
+      description: A plain credential as a combination of an identifier and a secret.
+      allOf:
+        - $ref: '#/components/schemas/SinkCredential'
+        - type: object
+          required:
+            - identifier
+            - secret
+          properties:
+            identifier:
+              description: The identifier might be an account or username.
+              type: string
+            secret:
+              description: The secret might be a password or passphrase.
+              type: string
+
+    AccessTokenCredential:
+      type: object
+      description: An access token credential.
+      allOf:
+        - $ref: '#/components/schemas/SinkCredential'
+        - type: object
+          properties:
+            accessToken:
+              description: REQUIRED. An access token is a previously acquired token granting access to the target resource.
+              type: string
+            accessTokenExpiresUtc:
+              type: string
+              format: date-time
+              description: REQUIRED. An absolute UTC instant at which the token shall be considered expired.
+            accessTokenType:
+              description: REQUIRED. Type of the access token (See [OAuth 2.0](https://tools.ietf.org/html/rfc6749#section-7.1)). For the current version of the API the type MUST be set to `Bearer`.
+              type: string
+              enum:
+                - bearer
+          required:
+            - accessToken
+            - accessTokenExpiresUtc
+            - accessTokenType
+
+    RefreshTokenCredential:
+      type: object
+      description: An access token credential with a refresh token.
+      allOf:
+        - $ref: '#/components/schemas/SinkCredential'
+        - type: object
+          properties:
+            accessToken:
+              description: REQUIRED. An access token is a previously acquired token granting access to the target resource.
+              type: string
+            accessTokenExpiresUtc:
+              type: string
+              format: date-time
+              description: REQUIRED. An absolute UTC instant at which the token shall be considered expired.
+            accessTokenType:
+              description: REQUIRED. Type of the access token (See [OAuth 2.0](https://tools.ietf.org/html/rfc6749#section-7.1)).
+              type: string
+              enum:
+                - bearer
+            refreshToken:
+              description: REQUIRED. An refresh token credential used to acquire access tokens.
+              type: string
+            refreshTokenEndpoint:
+              type: string
+              format: uri
+              description: REQUIRED. A URL at which the refresh token can be traded for an access token.
+      required:
+        - accessToken
+        - accessTokenExpiresUtc
+        - accessTokenType
+        - refreshToken
+        - refreshTokenEndpoint
+
+    ErrorInfo:
+      type: object
+      required:
+        - status
+        - code
+        - message
+      properties:
+        status:
+          type: integer
+          description: HTTP response status code
+        code:
+          type: string
+          description: A human-readable code to describe the error
+        message:
+          type: string
+          description: A human-readable description of what the event represents
+
+  responses:
+    Generic400:
+      description: Bad Request
+      headers:
+        x-correlator:
+          $ref: "#/components/headers/x-correlator"
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ErrorInfo"
+              - type: object
+                properties:
+                  status:
+                    enum:
+                      - 400
+                  code:
+                    enum:
+                      - INVALID_ARGUMENT
+                      - OUT_OF_RANGE
+          examples:
+            GENERIC_400_INVALID_ARGUMENT:
+              description: Invalid Argument. Generic Syntax Exception
+              value:
+                status: 400
+                code: INVALID_ARGUMENT
+                message: Client specified an invalid argument, request body or query param.
+            GENERIC_400_OUT_OF_RANGE:
+              description: Out of Range. Specific Syntax Exception used when a given field has a pre-defined range or a invalid filter criteria combination is requested
+              value:
+                status: 400
+                code: OUT_OF_RANGE
+                message: Client specified an invalid range.
+
+    Generic401:
+      description: Unauthorized
+      headers:
+        x-correlator:
+          $ref: "#/components/headers/x-correlator"
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ErrorInfo"
+              - type: object
+                properties:
+                  status:
+                    enum:
+                      - 401
+                  code:
+                    enum:
+                      - UNAUTHENTICATED
+          examples:
+            GENERIC_401_UNAUTHENTICATED:
+              description: Request cannot be authenticated and a new authentication is required
+              value:
+                status: 401
+                code: UNAUTHENTICATED
+                message: Request not authenticated due to missing, invalid, or expired credentials. A new authentication is required.
+
+    Generic403:
+      description: Forbidden
+      headers:
+        x-correlator:
+          $ref: "#/components/headers/x-correlator"
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ErrorInfo"
+              - type: object
+                properties:
+                  status:
+                    enum:
+                      - 403
+                  code:
+                    enum:
+                      - PERMISSION_DENIED
+                      - INVALID_TOKEN_CONTEXT
+          examples:
+            GENERIC_403_PERMISSION_DENIED:
+              description: Permission denied. OAuth2 token access does not have the required scope or when the user fails operational security
+              value:
+                status: 403
+                code: PERMISSION_DENIED
+                message: Client does not have sufficient permissions to perform this action.
+            GENERIC_403_INVALID_TOKEN_CONTEXT:
+              description: Reflect some inconsistency between information in some field of the API and the related OAuth2 Token
+              value:
+                status: 403
+                code: INVALID_TOKEN_CONTEXT
+                message: "{{field}} is not consistent with access token."
+
+    Generic404:
+      description: Not found
+      headers:
+        x-correlator:
+          $ref: "#/components/headers/x-correlator"
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ErrorInfo"
+              - type: object
+                properties:
+                  status:
+                    enum:
+                      - 404
+                  code:
+                    enum:
+                      - NOT_FOUND
+                      - IDENTIFIER_NOT_FOUND
+          examples:
+            GENERIC_404_NOT_FOUND:
+              description: Resource is not found
+              value:
+                status: 404
+                code: NOT_FOUND
+                message: The specified resource is not found.
+            GENERIC_404_IDENTIFIER_NOT_FOUND:
+              description: Some identifier cannot be matched to a device
+              value:
+                status: 404
+                code: IDENTIFIER_NOT_FOUND
+                message: Device identifier not found.
+
+    Generic410:
+      description: Gone
+      headers:
+        x-correlator:
+          $ref: "#/components/headers/x-correlator"
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ErrorInfo"
+              - type: object
+                properties:
+                  status:
+                    enum:
+                      - 410
+                  code:
+                    enum:
+                      - GONE
+          examples:
+            GENERIC_410_GONE:
+              description: Use in notifications flow to allow API Consumer to indicate that its callback is no longer available
+              value:
+                status: 410
+                code: GONE
+                message: Access to the target resource is no longer available.
+
+  examples:
+
+    NETWORK_STATUS_CHANGED_EXAMPLE:
+      summary: Network status changed
+      description: Cloud event example for network status change to ACTIVATED
+      value:
+        id: 625b2d4b-4da7-4f07-9169-e60ffdf7667c
+        source: 'https://api.example.com/dedicated-network/v0/networks/b69e5404-3871-448d-8f9f-11dc5d29a4c8'
+        specversion: '1.0'
+        type: "org.camaraproject.dedicated-network.v0.network-status-changed"
+        time: '2024-11-29T13:04:00Z'
+        data:
+          networkId: 'b69e5404-3871-448d-8f9f-11dc5d29a4c8'
+          status: 'ACTIVATED'
