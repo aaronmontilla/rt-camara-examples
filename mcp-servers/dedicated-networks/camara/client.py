@@ -82,7 +82,9 @@ def handle_error(e: Exception) -> str:
         # Try to extract the CAMARA error body (has "code" and "message" fields)
         try:
             body = e.response.json()
-            detail = body.get("message") or body.get("code") or ""
+            detail = str(body.get("message") or body.get("code") or "")
+            # The messages below add their own period after the detail.
+            detail = detail.strip().rstrip(".").rstrip()
             suffix = f" — {detail}" if detail else ""
         except Exception:
             suffix = ""
