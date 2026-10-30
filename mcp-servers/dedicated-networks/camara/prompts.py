@@ -68,7 +68,8 @@ If an area has a `geojsonNote` instead, tell the user no map link is available.
 ### 1.2  Reserve the Dedicated Network
 
 Use **`camara_create_network`** with:
-- `profileId` — the profile UUID from step 1.1a
+- `networkProfileId` — the profile UUID from step 1.1a (for a single-device
+  network, give `qosProfileName` instead; exactly one of the two)
 - `serviceAreaId` — the area UUID from step 1.1b
 - `serviceTime` — `{ start, end }` RFC 3339 timestamps for the reservation window
 - Optionally: `sink` (webhook URL) and `sinkCredential` for status notifications
