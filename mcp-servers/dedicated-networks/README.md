@@ -112,8 +112,27 @@ Is access <accessId> granted yet?
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `CAMARA_API_ROOT` | Base URL of your CAMARA API server | `http://localhost:9091` |
-| `CAMARA_ACCESS_TOKEN` | Bearer token for authentication | *(empty; no auth header sent)* |
+| `CAMARA_ACCESS_TOKEN` | Bearer token for authentication, used as given | *(empty; no auth header sent)* |
+| `CAMARA_TOKEN_URL` | OAuth 2.0 token endpoint, for the client credentials grant | *(empty)* |
+| `CAMARA_CLIENT_ID` | OAuth client id | *(empty)* |
+| `CAMARA_CLIENT_SECRET` | OAuth client secret | *(empty)* |
+| `CAMARA_SCOPE` | Space-separated scopes to request, if the provider needs them | *(empty)* |
+| `CAMARA_TOKEN_AUTH` | How the client id and secret are sent: `basic` (HTTP Basic) or `body` (form fields) | `basic` |
 | `CAMARA_MAP_TILE_URL` | XYZ tile URL template for the `camara_pick_location` map (only used if the map picker is re-enabled) | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` |
+
+### Authentication
+
+Use one of the two:
+
+- **A fixed token**: set `CAMARA_ACCESS_TOKEN`. It is sent as given and never renewed, so replace it when it expires.
+- **Client credentials**: set `CAMARA_TOKEN_URL`, `CAMARA_CLIENT_ID` and `CAMARA_CLIENT_SECRET` (plus `CAMARA_SCOPE`
+  and `CAMARA_TOKEN_AUTH` if your provider needs them) and leave `CAMARA_ACCESS_TOKEN` empty. The server requests a
+  token when it first needs one, keeps it in memory, renews it shortly before it expires, and renews it once more if the
+  API answers 401. Long sessions therefore keep working after the first token expires.
+
+If both are set, `CAMARA_ACCESS_TOKEN` is used. The start-up line says which one is active (`Auth: token set`,
+`Auth: client credentials` or `Auth: NO TOKEN`) and names any client credential variable that is missing; it never
+shows a token or the secret.
 
 ### Claude Desktop (Windows)
 
@@ -138,7 +157,8 @@ Explorer address bar; create the file if it does not exist) and add this block i
 ```
 
 Replace `CAMARA_API_ROOT` with the URL of your CAMARA API server and `CAMARA_ACCESS_TOKEN` with your bearer token, then
-restart Claude Desktop.
+restart Claude Desktop. To let the server obtain and renew tokens itself, put `CAMARA_TOKEN_URL`, `CAMARA_CLIENT_ID` and
+`CAMARA_CLIENT_SECRET` in `"env"` instead of `CAMARA_ACCESS_TOKEN` (see [Authentication](#authentication)).
 
 ### OpenCode
 
@@ -176,8 +196,10 @@ binary. Restart OpenCode to pick up the server. Its tools then have the prefix `
 server.py                   Entry point: creates the FastMCP instance and
                             registers all tool groups and prompts.
 camara/
-  config.py                 Reads CAMARA_API_ROOT and CAMARA_ACCESS_TOKEN
-                            from environment variables.
+  config.py                 Reads CAMARA_API_ROOT and the authentication
+                            settings from environment variables.
+  auth.py                   Access token: fixed, or obtained and renewed with
+                            OAuth 2.0 client credentials.
   client.py                 Shared async HTTP client (_api_request, _handle_error).
   models.py                 Pydantic input models shared across tools.
   formatters.py             Turns API JSON responses into readable Markdown.

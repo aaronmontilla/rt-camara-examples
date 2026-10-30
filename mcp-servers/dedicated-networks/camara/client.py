@@ -12,23 +12,29 @@ from typing import Any, Dict, Optional
 
 import httpx
 
-from camara.config import ACCESS_TOKEN, API_ROOT, API_PATHS
+from camara.auth import TokenError, TokenProvider
+from camara.config import API_ROOT, API_PATHS
+
+# Supplies the bearer token: fixed (CAMARA_ACCESS_TOKEN) or obtained and renewed
+# with OAuth client credentials (CAMARA_TOKEN_URL, CAMARA_CLIENT_ID, ...).
+_token_provider = TokenProvider.from_config()
 
 
 # ─── HTTP headers ──────────────────────────────────────────────────────────────
 
-def _build_headers() -> Dict[str, str]:
+async def _build_headers() -> Dict[str, str]:
     """Return request headers for every CAMARA API call.
 
     Always includes Content-Type and Accept for JSON.
-    Adds Authorization: Bearer <token> only when a token is configured.
+    Adds Authorization: Bearer <token> only when authentication is configured.
     """
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
-    if ACCESS_TOKEN:
-        headers["Authorization"] = f"Bearer {ACCESS_TOKEN}"
+    token = await _token_provider.get_token()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     return headers
 
 
@@ -46,6 +52,7 @@ async def api_request(
     Builds the full URL from API_ROOT + the sub-API path + the endpoint path.
     Strips out any query parameters whose value is None.
     Raises httpx.HTTPStatusError on 4xx / 5xx so handle_error() can format them.
+    Raises TokenError when a client-credentials token cannot be obtained.
     Returns None for 204 No Content (used by DELETE operations).
     """
     url = f"{API_ROOT}{API_PATHS[api]}{path}"
@@ -54,13 +61,20 @@ async def api_request(
     clean_params = {k: v for k, v in (params or {}).items() if v is not None}
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.request(
-            method=method,
-            url=url,
-            headers=_build_headers(),
-            json=body,
-            params=clean_params or None,
-        )
+        async def send() -> httpx.Response:
+            return await client.request(
+                method=method,
+                url=url,
+                headers=await _build_headers(),
+                json=body,
+                params=clean_params or None,
+            )
+
+        response = await send()
+        if response.status_code == 401 and _token_provider.renewable:
+            # The token may have expired or been revoked early: get a new one, once.
+            _token_provider.invalidate()
+            response = await send()
         response.raise_for_status()
 
         if response.status_code == 204:   # DELETE returns no body
@@ -91,7 +105,10 @@ def handle_error(e: Exception) -> str:
 
         messages: Dict[int, str] = {
             400: f"Error 400 Bad Request{suffix}. Check all required fields are correct.",
-            401: f"Error 401 Unauthorized{suffix}. Set a valid token via CAMARA_ACCESS_TOKEN.",
+            401: (
+                f"Error 401 Unauthorized{suffix}. Check the credentials: CAMARA_ACCESS_TOKEN, or "
+                "CAMARA_CLIENT_ID and CAMARA_CLIENT_SECRET."
+            ),
             403: f"Error 403 Forbidden{suffix}. Your token lacks the required scope.",
             404: f"Error 404 Not Found{suffix}. Verify the ID is correct.",
             409: f"Error 409 Conflict{suffix}. Resource may already exist or be in an incompatible state.",
@@ -100,6 +117,11 @@ def handle_error(e: Exception) -> str:
         }
         return messages.get(status, f"Error {status}{suffix}. API request failed.")
 
+    if isinstance(e, TokenError):
+        return (
+            f"Error: Could not obtain an access token: {e}. "
+            "Check CAMARA_TOKEN_URL, CAMARA_CLIENT_ID, CAMARA_CLIENT_SECRET and CAMARA_SCOPE."
+        )
     if isinstance(e, httpx.ConnectError):
         return (
             f"Error: Cannot connect to {API_ROOT}. "

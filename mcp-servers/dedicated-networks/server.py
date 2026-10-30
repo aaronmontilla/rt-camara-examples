@@ -17,6 +17,9 @@ which opens an interactive map (see camara/ui.py).
 Configuration (environment variables):
   CAMARA_API_ROOT      Base URL of your CAMARA server   (default: http://localhost:9091)
   CAMARA_ACCESS_TOKEN  Bearer token for authentication  (default: empty → no auth header)
+  CAMARA_TOKEN_URL, CAMARA_CLIENT_ID, CAMARA_CLIENT_SECRET, CAMARA_SCOPE, CAMARA_TOKEN_AUTH
+                       OAuth 2.0 client credentials: the server obtains and
+                       renews the token itself (see camara/auth.py)
   CAMARA_MAP_TILE_URL  XYZ tile URL for the area-picker map
                        (default: https://tile.openstreetmap.org/{z}/{x}/{y}.png)
 
