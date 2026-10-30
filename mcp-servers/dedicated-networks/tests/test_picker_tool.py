@@ -101,8 +101,9 @@ def test_empty_areas_returns_message_not_an_error(monkeypatch):
     assert "message" in result
 
 
-def test_connection_error_is_handled_not_raised(monkeypatch):
+def test_connection_error_is_raised_as_a_readable_tool_error(monkeypatch):
     import httpx
+    from mcp.server.mcpserver.exceptions import ToolError
 
     async def fake_api_request(*args, **kwargs):
         raise httpx.ConnectError("boom")
@@ -110,6 +111,5 @@ def test_connection_error_is_handled_not_raised(monkeypatch):
     monkeypatch.setattr(picker_module, "api_request", fake_api_request)
     tool = _register_and_get_tool()
 
-    output = asyncio.run(tool(PickLocationInput()))
-
-    assert "Cannot connect" in output
+    with pytest.raises(ToolError, match="Cannot connect"):
+        asyncio.run(tool(PickLocationInput()))

@@ -200,7 +200,8 @@ camara/
                             settings from environment variables.
   auth.py                   Access token: fixed, or obtained and renewed with
                             OAuth 2.0 client credentials.
-  client.py                 Shared async HTTP client (_api_request, _handle_error).
+  client.py                 Shared async HTTP client (api_request), error
+                            messages (handle_error, tool_error).
   models.py                 Pydantic input models shared across tools.
   formatters.py             Turns API JSON responses into readable Markdown.
   geo.py                    Geometry helpers: bounding boxes and GeoJSON /
@@ -218,10 +219,12 @@ camara/
 ```
 
 Each tool has a Pydantic model that validates what the assistant passes in, is registered with the `@mcp.tool`
-decorator, calls `_api_request()` and formats the result, and has its errors turned into readable messages by
-`_handle_error()`. All tools accept `response_format: 'json'` to return the raw API payload instead of Markdown.
+decorator, calls `api_request()` and formats the result. When a call fails (an API error, a connection problem, or a
+token that cannot be obtained), the tool raises `tool_error()`: the client receives a result flagged `isError` whose
+text is the readable message from `handle_error()`, the same way invalid arguments are reported. All tools accept
+`response_format: 'json'` to return the raw API payload instead of Markdown.
 
-The test suite has 42 cases:
+The test suite has 82 cases:
 
 ```bash
 pip install -r requirements-dev.txt

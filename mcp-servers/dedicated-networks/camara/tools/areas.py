@@ -16,7 +16,7 @@ from typing import Any, Dict, List
 
 from mcp.server.mcpserver import MCPServer as FastMCP
 
-from camara.client import api_request, handle_error
+from camara.client import api_request, tool_error
 from camara.formatters import fmt_area
 from camara.geo import combined_geojson_url, with_geojson_url
 from camara.models import GetAreaInput, ResponseFormat, RetrieveAreasInput
@@ -116,7 +116,7 @@ def register_area_tools(mcp: FastMCP) -> None:
             return header + "\n".join(fmt_area(a) for a in areas)
 
         except Exception as e:
-            return handle_error(e)
+            raise tool_error(e) from e
 
     # ── camara_get_area ────────────────────────────────────────────────────────
 
@@ -165,4 +165,4 @@ def register_area_tools(mcp: FastMCP) -> None:
             return f"# Network Service Area\n\n{fmt_area(area)}"
 
         except Exception as e:
-            return handle_error(e)
+            raise tool_error(e) from e

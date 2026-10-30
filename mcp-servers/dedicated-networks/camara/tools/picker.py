@@ -20,7 +20,7 @@ from typing import Any, Dict, List
 
 from mcp.server.apps import Apps
 
-from camara.client import api_request, handle_error
+from camara.client import api_request, tool_error
 from camara.config import MAP_TILE_URL
 from camara.geo import combined_bounds, combined_geojson_url, with_geojson_url
 from camara.models import PickLocationInput
@@ -107,4 +107,4 @@ def register_picker_tool(apps: Apps) -> None:
             return json.dumps(result, indent=2)
 
         except Exception as e:
-            return handle_error(e)
+            raise tool_error(e) from e

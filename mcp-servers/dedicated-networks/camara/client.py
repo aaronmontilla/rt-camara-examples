@@ -3,14 +3,16 @@ camara/client.py
 ────────────────
 Shared HTTP client and error handler used by every tool.
 
-Only two things are exported:
+Exported:
   api_request(api, path, method, body, params)  →  parsed JSON (dict / list / None)
   handle_error(exception)                        →  human-readable error string
+  tool_error(exception)                          →  ToolError for a tool to raise
 """
 
 from typing import Any, Dict, Optional
 
 import httpx
+from mcp.server.mcpserver.exceptions import ToolError
 
 from camara.auth import TokenError, TokenProvider
 from camara.config import API_ROOT, API_PATHS
@@ -84,11 +86,21 @@ async def api_request(
 
 # ─── Error handler ─────────────────────────────────────────────────────────────
 
+def tool_error(e: Exception) -> ToolError:
+    """The exception a tool raises when it fails.
+
+    The MCP client receives a result flagged isError whose text is the readable
+    message from handle_error(), so the model can still act on it, and clients
+    that measure success (or show errors differently) see the call as failed.
+    Usage in a tool:  except Exception as e: raise tool_error(e) from e
+    """
+    return ToolError(handle_error(e))
+
+
 def handle_error(e: Exception) -> str:
     """Convert any exception into a clear, actionable error message.
 
-    Returns a plain string so tool functions can return it directly to Claude
-    instead of crashing.
+    Tools raise it wrapped in a ToolError (see tool_error) instead of crashing.
     """
     if isinstance(e, httpx.HTTPStatusError):
         status = e.response.status_code

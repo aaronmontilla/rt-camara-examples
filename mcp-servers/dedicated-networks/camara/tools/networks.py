@@ -18,7 +18,7 @@ from typing import Any, Dict, List
 
 from mcp.server.mcpserver import MCPServer as FastMCP
 
-from camara.client import api_request, handle_error
+from camara.client import api_request, tool_error
 from camara.formatters import fmt_network
 from camara.models import (
     CreateNetworkInput,
@@ -77,7 +77,7 @@ def register_network_tools(mcp: FastMCP) -> None:
             )
 
         except Exception as e:
-            return handle_error(e)
+            raise tool_error(e) from e
 
     # ── camara_get_network ─────────────────────────────────────────────────────
 
@@ -122,7 +122,7 @@ def register_network_tools(mcp: FastMCP) -> None:
             return f"# Dedicated Network\n\n{fmt_network(network)}"
 
         except Exception as e:
-            return handle_error(e)
+            raise tool_error(e) from e
 
     # ── camara_create_network ──────────────────────────────────────────────────
 
@@ -203,7 +203,7 @@ def register_network_tools(mcp: FastMCP) -> None:
             )
 
         except Exception as e:
-            return handle_error(e)
+            raise tool_error(e) from e
 
     # ── camara_delete_network ──────────────────────────────────────────────────
 
@@ -243,4 +243,4 @@ def register_network_tools(mcp: FastMCP) -> None:
                 f"(resource reservation cancelled)."
             )
         except Exception as e:
-            return handle_error(e)
+            raise tool_error(e) from e

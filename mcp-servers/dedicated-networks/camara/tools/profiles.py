@@ -16,7 +16,7 @@ from typing import Any, Dict, List
 
 from mcp.server.mcpserver import MCPServer as FastMCP
 
-from camara.client import api_request, handle_error
+from camara.client import api_request, tool_error
 from camara.formatters import fmt_profile
 from camara.models import GetProfileInput, ListProfilesInput, ResponseFormat
 
@@ -77,7 +77,7 @@ def register_profile_tools(mcp: FastMCP) -> None:
             )
 
         except Exception as e:
-            return handle_error(e)
+            raise tool_error(e) from e
 
     # ── camara_get_profile ─────────────────────────────────────────────────────
 
@@ -122,4 +122,4 @@ def register_profile_tools(mcp: FastMCP) -> None:
             return f"# Network Profile\n\n{fmt_profile(profile)}"
 
         except Exception as e:
-            return handle_error(e)
+            raise tool_error(e) from e

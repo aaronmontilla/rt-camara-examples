@@ -18,7 +18,7 @@ from typing import Any, Dict, List
 
 from mcp.server.mcpserver import MCPServer as FastMCP
 
-from camara.client import api_request, handle_error
+from camara.client import api_request, tool_error
 from camara.formatters import fmt_access
 from camara.models import (
     CreateAccessInput,
@@ -85,7 +85,7 @@ def register_access_tools(mcp: FastMCP) -> None:
             )
 
         except Exception as e:
-            return handle_error(e)
+            raise tool_error(e) from e
 
     # ── camara_get_access ──────────────────────────────────────────────────────
 
@@ -130,7 +130,7 @@ def register_access_tools(mcp: FastMCP) -> None:
             return f"# Device Access\n\n{fmt_access(access)}"
 
         except Exception as e:
-            return handle_error(e)
+            raise tool_error(e) from e
 
     # ── camara_create_access ───────────────────────────────────────────────────
 
@@ -207,7 +207,7 @@ def register_access_tools(mcp: FastMCP) -> None:
             )
 
         except Exception as e:
-            return handle_error(e)
+            raise tool_error(e) from e
 
     # ── camara_delete_access ───────────────────────────────────────────────────
 
@@ -247,4 +247,4 @@ def register_access_tools(mcp: FastMCP) -> None:
                 f"(device access revoked)."
             )
         except Exception as e:
-            return handle_error(e)
+            raise tool_error(e) from e
