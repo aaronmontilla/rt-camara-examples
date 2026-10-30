@@ -13,7 +13,10 @@ const { apiRequest } = require('../services/apiService');
 const router = express.Router();
 
 const PROFILES_BASE = () => (process.env.PROFILES_URL || '').replace(/\/+$/, '');
-const QOD_BASE      = () => (process.env.QOD_URL      || '').replace(/\/+$/, '');
+const QOD_BASE      = () => {
+  const url = (process.env.QOD_URL || '').replace(/\/+$/, '');
+  return url.includes('undefined') ? '' : url;   // placeholder counts as unset
+};
 
 // GET /api/profiles/network  ->  GET {{ profiles_url }}/profiles
 router.get('/network', async (req, res) => {
@@ -38,7 +41,7 @@ router.get('/network/:profileId', async (req, res) => {
 // GET /api/profiles/qos  ->  POST {{ qod_url }}/retrieve-qos-profiles (no device filter = all profiles)
 router.get('/qos', async (req, res) => {
   if (!QOD_BASE()) {
-    return res.status(503).json({ error: 'QOD_URL is not configured in .env' });
+    return res.status(503).json({ error: 'QoS profiles need a Quality on Demand API; QOD_URL is not set.' });
   }
   try {
     const result = await apiRequest(`${QOD_BASE()}/retrieve-qos-profiles`, {
@@ -54,7 +57,7 @@ router.get('/qos', async (req, res) => {
 // GET /api/profiles/qos/:name  ->  GET {{ qod_url }}/qos-profiles/:name
 router.get('/qos/:name', async (req, res) => {
   if (!QOD_BASE()) {
-    return res.status(503).json({ error: 'QOD_URL is not configured in .env' });
+    return res.status(503).json({ error: 'QoS profiles need a Quality on Demand API; QOD_URL is not set.' });
   }
   try {
     const result = await apiRequest(`${QOD_BASE()}/qos-profiles/${req.params.name}`, { method: 'GET' });

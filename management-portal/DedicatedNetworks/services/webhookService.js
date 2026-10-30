@@ -56,4 +56,37 @@ function sinkUrl(resource) {
   return `${base}/webhooks/${resource}`;
 }
 
-module.exports = { storeNotification, getNotifications, clearNotifications, sinkUrl };
+/**
+ * Bearer token this portal hands out as sinkCredential and then requires on
+ * callbacks. Derived from CLIENT_SECRET so it survives restarts; random if
+ * there is no secret.
+ */
+const crypto = require('crypto');
+const fallbackToken = crypto.randomBytes(24).toString('hex');
+function sinkToken() {
+  const secret = process.env.CLIENT_SECRET;
+  if (!secret) return fallbackToken;
+  return crypto.createHmac('sha256', secret).update('portal-sink').digest('hex');
+}
+
+/**
+ * Body fields (sink, sinkCredential) for a create request. A caller-supplied
+ * sink is passed through untouched; otherwise the portal's own receiver and
+ * an ACCESSTOKEN credential for it are used.
+ */
+function sinkFields(resource, reqBody) {
+  if (reqBody.sink) return { sink: reqBody.sink };
+  const sink = sinkUrl(resource);
+  if (!sink) return {};
+  return {
+    sink,
+    sinkCredential: reqBody.sinkCredential || {
+      credentialType: 'ACCESSTOKEN',
+      accessToken: sinkToken(),
+      accessTokenType: 'bearer',
+      accessTokenExpiresUtc: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString()
+    }
+  };
+}
+
+module.exports = { storeNotification, getNotifications, clearNotifications, sinkUrl, sinkToken, sinkFields };

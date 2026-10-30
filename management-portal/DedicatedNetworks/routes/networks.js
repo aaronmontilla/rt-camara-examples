@@ -10,7 +10,7 @@ https://hub.5g-mag.com/Getting-Started/OFFICIAL_5G-MAG_Public_License_v1.0.pdf
 
 const express = require('express');
 const { apiRequest } = require('../services/apiService');
-const { sinkUrl } = require('../services/webhookService');
+const { sinkFields } = require('../services/webhookService');
 const router = express.Router();
 
 const BASE = () => process.env.NETWORKS_URL;
@@ -31,8 +31,7 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const body = { ...req.body };
-    const sink = req.body.sink || sinkUrl('networks');
-    if (sink) body.sink = sink;
+    Object.assign(body, sinkFields('networks', req.body));
     const result = await apiRequest(`${BASE()}/networks`, {
       method: 'POST',
       body

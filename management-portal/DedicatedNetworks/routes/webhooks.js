@@ -9,15 +9,19 @@ https://hub.5g-mag.com/Getting-Started/OFFICIAL_5G-MAG_Public_License_v1.0.pdf
 */
 
 const express = require('express');
-const { storeNotification, getNotifications, clearNotifications } = require('../services/webhookService');
+const { storeNotification, getNotifications, clearNotifications, sinkToken } = require('../services/webhookService');
 const router = express.Router();
 
-// Generic handler - CAMARA APIs POST to /webhooks/:resource
+// CAMARA APIs POST CloudEvents to /webhooks/:resource, with the sinkCredential
+// we registered sent as "Authorization: Bearer <token>". Reply 204, no body.
 // e.g. /webhooks/networks, /webhooks/accesses, /webhooks/sessions
 router.post('/:resource', (req, res) => {
-  const entry = storeNotification(req.params.resource, req.body);
-  // Acknowledge receipt immediately (CAMARA expects 200/204)
-  res.status(200).json({ received: true, id: entry.id });
+  const auth = req.get('authorization') || '';
+  if (auth !== `Bearer ${sinkToken()}`) {
+    return res.status(401).json({ status: 401, code: 'UNAUTHENTICATED', message: 'Missing or invalid sink credential.' });
+  }
+  storeNotification(req.params.resource, req.body);
+  res.status(204).end();
 });
 
 // Frontend polls this to see incoming notifications

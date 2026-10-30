@@ -26,6 +26,8 @@ Run (stdio transport for Claude Desktop):
 For full setup instructions see README.md.
 """
 
+import sys
+
 from mcp.server.mcpserver import MCPServer as FastMCP
 
 from camara.tools.networks  import register_network_tools
@@ -35,6 +37,7 @@ from camara.tools.areas     import register_area_tools
 from camara.prompts         import register_prompts
 from camara.ui              import build_apps_extension
 from camara.geo             import GEOJSON_LINK_RULE
+from camara.config          import startup_line
 
 # Sent to the host at initialisation, so it applies to every tool and prompt.
 SERVER_INSTRUCTIONS = (
@@ -69,4 +72,5 @@ register_prompts(mcp)
 
 # ── Start the server ───────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    print(startup_line(), file=sys.stderr, flush=True)   # standard error: standard output carries the protocol
     mcp.run()

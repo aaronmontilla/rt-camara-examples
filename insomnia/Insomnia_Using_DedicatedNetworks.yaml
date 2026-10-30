@@ -1040,7 +1040,7 @@ cookieJar:
     - id: e5b43ec6-366c-4ba0-98de-d50b81ae22f3
       key: KC_RESTART
       value: ""
-      domain: api-sbox.erdc.ericsson.net
+      domain: api.example.com
       path: /realms/nod/
       secure: false
       httpOnly: true
@@ -1050,7 +1050,7 @@ cookieJar:
     - id: 2e946441-b7db-4f77-bd24-f3b984bc4b19
       key: KC_AUTH_STATE
       value: ""
-      domain: api-sbox.erdc.ericsson.net
+      domain: api.example.com
       path: /realms/nod/
       secure: false
       httpOnly: false
@@ -1077,10 +1077,10 @@ environments:
       data:
         client_id: YOUR CLENT ID HERE
         client_secret: YOUR CLIENT SECRET HERE
-        token_url: https://api-sbox.erdc.ericsson.net/tokens
-        areas_url: https://api-sbox.erdc.ericsson.net/dedicated-network-areas/v0.1-wip
-        networks_url: https://api-sbox.erdc.ericsson.net/dedicated-network/v0.2-wip
-        profiles_url: https://api-sbox.erdc.ericsson.net/dedicated-network-profiles/v0.2-wip
-        accesses_url: https://api-sbox.erdc.ericsson.net/dedicated-network-accesses/v0.2-wip
+        token_url: https://api.example.com/tokens
+        areas_url: https://api.example.com/dedicated-network-areas/v0.1-wip
+        networks_url: https://api.example.com/dedicated-network/v0.2-wip
+        profiles_url: https://api.example.com/dedicated-network-profiles/v0.2-wip
+        accesses_url: https://api.example.com/dedicated-network-accesses/v0.2-wip
         networkId: 3c6ea613-60fb-4f5d-ad38-144345622ca7
         dedicated_network_id: 26654968-1bc2-46d0-882a-3930c4edc9f7

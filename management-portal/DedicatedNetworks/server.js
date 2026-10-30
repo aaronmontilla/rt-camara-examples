@@ -15,7 +15,7 @@ const app  = express();
 const PORT = process.env.PORT || 3555;
 
 // ── Middleware ──────────────────────────────────────────────
-app.use(express.json());
+app.use(express.json({ type: ['application/json', 'application/cloudevents+json', 'application/*+json'] }));
 
 // Request logger
 app.use((req, res, next) => {

@@ -20,7 +20,12 @@ from typing import Dict
 
 # ─── API server URL ────────────────────────────────────────────────────────────
 # All four sub-APIs append their own path to this root URL.
-API_ROOT: str = os.environ.get("CAMARA_API_ROOT", "http://localhost:9091")
+def _with_one_trailing_slash(url: str) -> str:
+    """The sub-API paths are appended to the root as they are, so the root ends in exactly one slash."""
+    return url.rstrip("/") + "/"
+
+
+API_ROOT: str = _with_one_trailing_slash(os.environ.get("CAMARA_API_ROOT", "http://localhost:9091"))
 
 # ─── Authentication token ──────────────────────────────────────────────────────
 # When set, every HTTP request carries  Authorization: Bearer <token>
@@ -39,3 +44,8 @@ API_PATHS: Dict[str, str] = {
     "accesses": "dedicated-network-accesses/v0.2-wip",
     "areas":    "dedicated-network-areas/v0.1-wip",
 }
+
+
+def startup_line() -> str:
+    """The line the server writes to standard error when it starts. It says whether a token is set, never the token."""
+    return f"[camara-mcp] Starting | API root: {API_ROOT} | Auth: {'token set' if ACCESS_TOKEN else 'NO TOKEN'}"

@@ -1,30 +1,14 @@
-# CAMARA Dedicated Networks — MCP Server (Python)
+# CAMARA Dedicated Networks MCP Server (Python)
 
-A Python MCP server that lets Claude Desktop call the four CAMARA Dedicated Networks APIs directly.
+A Python MCP server that lets an AI assistant (Claude Desktop, OpenCode) call the four CAMARA Dedicated Networks APIs.
 
----
+## Introduction
 
-## API versions
-
-This server was built against the following CAMARA Dedicated Networks APIs, as the sandbox deploys them
-(paths in `camara/config.py`). The specification revision checked is the CAMARA source at tag `r2.2` of
-[camaraproject/DedicatedNetworks](https://github.com/camaraproject/DedicatedNetworks), read from each
-file's `info` block.
-
-| API | Title | Path prefix | Spec revision checked | Commonalities |
-|-----|-------|-------------|-----------------------|---------------|
-| Networks | `Dedicated Network - Networks` | `dedicated-network/v0.2-wip` | `0.2.0-rc.1` | `0.8.0` |
-| Network Profiles | `Dedicated Network - Network Profiles` | `dedicated-network-profiles/v0.2-wip` | `0.2.0-rc.1` | `0.8.0` |
-| Device Accesses | `Dedicated Network - Accesses` | `dedicated-network-accesses/v0.2-wip` | `0.2.0-rc.1` | `0.8.0` |
-| Service Areas | `Dedicated Network - Areas` | `dedicated-network-areas/v0.1-wip` | `0.1.0-rc.1` | `0.8.0` |
-
-The `main` branch of the CAMARA repository is labelled `wip` and differs from `r2.2`. The sandbox
-differs from the specification in two places: it rejects a `name` on a network, and it takes one device
-per access (`device`, not `devices`).
-
----
-
-## Concepts
+The server exposes the CAMARA Dedicated Networks APIs (Networks, Network Profiles, Device Accesses and Service
+Areas) as **12 tools** and **4 workflow prompts** of the [Model Context Protocol](https://modelcontextprotocol.io/).
+An assistant that has the server can list profiles, find service areas, reserve a dedicated network for a time window,
+give a device access to it and dismantle it, from a conversation. Service areas come with a geojson.io link for viewing
+them on a map.
 
 | Term | Description |
 |---|---|
@@ -32,31 +16,12 @@ per access (`device`, not `devices`).
 | **Profile** | A blueprint describing what a network can deliver (device limit, throughput, QoS options). |
 | **Access** | A grant allowing a specific device to connect to a network. |
 | **Service Area** | A geographic region with consistent dedicated-network coverage. |
-| **serviceAreaId** | UUID from `camara_retrieve_service_areas` — required to create a network. |
-| **networkProfileId** | UUID from `camara_list_profiles` — one of two ways to configure a network. |
-| **qosProfileName** | String name — simplified alternative to a profile UUID (single-device networks only). |
+| **serviceAreaId** | UUID from `camara_retrieve_service_areas`; required to create a network. |
+| **networkProfileId** | UUID from `camara_list_profiles`; one of two ways to configure a network. |
+| **qosProfileName** | String name; a simplified alternative to a profile UUID (single-device networks only). |
 
-### Network lifecycle
-
-```
-REQUESTED → RESERVED → ACTIVATED → TERMINATED
-              (future)   (live)      (ended)
-```
-
-### Access lifecycle
-
-```
-REQUESTED → GRANTED
-           REJECTED
-```
-
----
-
-## Tools
-
-This server exposes **12 tools** across four functional groups. Service areas come with a
-GeoJSON URL for viewing them on a map. (A 13th tool, `camara_pick_location`, an interactive
-map, is temporarily disabled.)
+A network goes from `REQUESTED` through `RESERVED` and `ACTIVATED` to `TERMINATED`; an access goes from `REQUESTED`
+to `GRANTED` or `REJECTED`.
 
 | Tool | Group | What it does |
 |------|-------|-------------|
@@ -65,152 +30,63 @@ map, is temporarily disabled.)
 | `camara_retrieve_service_areas` | Areas | Search geographic service areas (with GeoJSON URLs) |
 | `camara_get_area` | Areas | Get details of a specific service area (with GeoJSON URL) |
 | `camara_list_networks` | Networks | List all your dedicated networks |
-| `camara_get_network` | Networks | Get status/details of one network |
+| `camara_get_network` | Networks | Get status and details of one network |
 | `camara_create_network` | Networks | Create a new dedicated network |
-| `camara_delete_network` | Networks | Cancel/delete a network |
+| `camara_delete_network` | Networks | Cancel a network |
 | `camara_list_accesses` | Accesses | List device access grants |
-| `camara_get_access` | Accesses | Check if a device access is granted/denied |
+| `camara_get_access` | Accesses | Check if a device access is granted or denied |
 | `camara_create_access` | Accesses | Grant a device access to a network |
 | `camara_delete_access` | Accesses | Revoke a device's access |
 
----
+The parameters of each tool, the recommended order of calls, the GeoJSON links and the interactive map picker
+(currently disabled) are in [docs/tool-reference.md](docs/tool-reference.md).
 
-## Requirements
+## Specification
 
-- **Python 3.10 or newer**
-- **pip** (Python's package manager)
-- **Node.js 20+ and npm** — *optional*; only needed to build the
-  `camara_pick_location` map view if you re-enable it (currently disabled)
+Implements the four sub-APIs published in [camaraproject/DedicatedNetworks](https://github.com/camaraproject/DedicatedNetworks).
+The versions and paths this server uses are listed in the [root README](../../README.md#specification).
 
----
+## Install dependencies
 
-## Installation
+- Python 3.10 or newer, with pip.
+- Node.js 20 or newer with npm is needed only to build the map view if the map picker is re-enabled (it is disabled).
 
-### 1. Open a terminal / Command Prompt
-
-On Windows: press `Win + R`, type `cmd`, press Enter.
-
-### 2. Install the dependencies
+## Downloading
 
 ```bash
-cd path\to\camara-dedicated-networks-mcp-python
+cd ~
+git clone https://github.com/5G-MAG/rt-camara-examples.git
+cd rt-camara-examples/mcp-servers/dedicated-networks
+```
+
+## Building
+
+No build step. The map view of the disabled map picker is built as described in
+[docs/tool-reference.md](docs/tool-reference.md#building-the-view).
+
+## Installing
+
+```bash
 pip install -r requirements.txt
 ```
 
-This installs three packages:
-- `mcp[cli]` — the MCP framework (registers tools for Claude)
-- `httpx` — the async HTTP client (makes API calls)
-- `pydantic` — validates the inputs Claude sends to each tool
+This installs `mcp[cli]` (the MCP framework), `httpx` (the HTTP client) and `pydantic` (input validation).
 
-### 3. Build the map view (optional — map picker currently disabled)
+## Running
 
-Only needed if you re-enable the map picker (`ENABLE_MAP_PICKER = True` in
-`server.py`); skip it otherwise.
-
-```bash
-cd ui/area-picker
-npm install
-npm run build
-cd ../..
-```
-
-Details in [Interactive Map Picker](#interactive-map-picker-mcp-apps--temporarily-disabled).
-
-### 4. Test that it runs
+An MCP client starts the server itself, from the configuration below. To test that it starts, run it by hand:
 
 ```bash
 python server.py
 ```
 
-You should see a line like:
+The server writes a line like this to standard error (standard output carries the protocol), saying whether a token is set:
+
 ```
-[camara-mcp] Starting | API root: http://localhost:9091 | Auth: NO TOKEN
-```
-(Press Ctrl+C to stop.)
-
----
-
-## Configure Claude Desktop
-
-Open your Claude Desktop config file:
-
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-  (paste `%APPDATA%\Claude\claude_desktop_config.json` into the Explorer address bar)
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-
-Add the following block inside `"mcpServers"` (create the file if it does not exist):
-
-```json
-{
-  "mcpServers": {
-    "camara-dedicated-networks": {
-      "command": "python",
-      "args": [
-        "C:\\path\\to\\camara-dedicated-networks-mcp-python\\server.py"
-      ],
-      "env": {
-        "CAMARA_API_ROOT": "https://your-api-server.example.com",
-        "CAMARA_ACCESS_TOKEN": "your-bearer-token-here"
-      }
-    }
-  }
-}
+[camara-mcp] Starting | API root: http://localhost:9091/ | Auth: NO TOKEN
 ```
 
-> **Replace** `CAMARA_API_ROOT` with the real URL of your CAMARA API server.
-> **Replace** `CAMARA_ACCESS_TOKEN` with your bearer token.
-
-Then **restart Claude Desktop**.
-
----
-
-## Configure OpenCode
-
-[OpenCode](https://opencode.ai) reads MCP server definitions from an `opencode.json` (or `opencode.jsonc`) config file:
-
-- **Project-level**: `opencode.json` in your project root (highest precedence).
-- **Global**: `~/.config/opencode/opencode.json`.
-
-Add the following block (create the file if it does not exist):
-
-```json
-{
-  "mcp": {
-    "camara-dedicated-networks": {
-      "type": "local",
-      "command": [
-        "python",
-        "C:\\path\\to\\camara-dedicated-networks-mcp-python\\server.py"
-      ],
-      "enabled": true,
-      "environment": {
-        "CAMARA_API_ROOT": "https://your-api-server.example.com",
-        "CAMARA_ACCESS_TOKEN": "your-bearer-token-here"
-      }
-    }
-  }
-}
-```
-
-> **Replace** `CAMARA_API_ROOT` with the real URL of your CAMARA API server.
-> **Replace** `CAMARA_ACCESS_TOKEN` with your bearer token.
-> On macOS/Linux, use a forward-slash path (e.g. `/path/to/camara-dedicated-networks-mcp-python/server.py`) and, if needed, point `command` at your `python3` binary.
-
-Restart OpenCode (or run `opencode` again) to pick up the new server. Tools then become available with the `camara-dedicated-networks_` prefix, e.g. `camara-dedicated-networks_camara_list_profiles`.
-
----
-
-## Environment variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `CAMARA_API_ROOT` | Base URL of your CAMARA API server | `http://localhost:9091` |
-| `CAMARA_ACCESS_TOKEN` | Bearer token for authentication | *(empty — no auth header sent)* |
-| `CAMARA_MAP_TILE_URL` | XYZ tile URL template for the `camara_pick_location` map (only used if the map picker is re-enabled) | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` |
-
----
-
-## Example prompts
+Press Ctrl+C to stop. Example prompts to give the assistant once it is configured:
 
 ```
 What network profiles are available?
@@ -231,378 +107,73 @@ Grant phone number +1234567890 access to network <networkId>
 Is access <accessId> granted yet?
 ```
 
----
-
-## Tool reference
-
-### Group 1 — Networks
-
-#### `camara_list_networks`
-
-Lists all dedicated networks belonging to the caller.
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `response_format` | `markdown` \| `json` | No | Output format. Default: `markdown`. |
-
-**Returns** — Each network contains `id`, `status`, `serviceAreaId`, `serviceTime`, `networkProfileId` or `qosProfileName`, and `sink`.
-
----
-
-#### `camara_get_network`
-
-Fetches the current state of a single network by UUID.
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `networkId` | string (UUID) | Yes | ID of the network to inspect. |
-| `response_format` | `markdown` \| `json` | No | Output format. Default: `markdown`. |
-
-**Errors** — `404` Network not found.
-
----
-
-#### `camara_create_network`
-
-Creates a new dedicated network reservation. Starts in `REQUESTED` status.
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `serviceAreaId` | string (UUID) | Yes | Target geographic area (from `camara_retrieve_service_areas`). |
-| `serviceTime` | `{ start, end }` | Yes | RFC 3339 timestamps with timezone offset. |
-| `networkProfileId` | string (UUID) | Exclusive* | Profile UUID (from `camara_list_profiles`). |
-| `qosProfileName` | string | Exclusive* | QoS profile name — simplified, single-device option. |
-| `sink` | string (HTTPS URL) | No | Webhook for status-change notifications. |
-| `sinkCredential` | object | No | Auth credentials for the webhook. |
-| `response_format` | `markdown` \| `json` | No | Output format. Default: `markdown`. |
-
-*Provide **exactly one** of `networkProfileId` or `qosProfileName`.
-
-**Returns** — Created network object including its new `networkId`.
-
-**Errors** — `400` Invalid input (bad timestamps, bad UUID, or both/neither profile fields provided).
-
----
-
-#### `camara_delete_network`
-
-Cancels a network reservation. Irreversible. Delete all device accesses first.
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `networkId` | string (UUID) | Yes | ID of the network to cancel. |
-
-**Errors** — `404` Network not found.
-
----
-
-### Group 2 — Profiles
-
-Profiles are read-only resources managed by the CSP.
-
-#### `camara_list_profiles`
-
-Lists all network profiles available to the caller.
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `name` | string | No | Exact profile name to filter by. |
-| `response_format` | `markdown` \| `json` | No | Output format. Default: `markdown`. |
-
-**Returns** — Each profile contains `id`, `name`, `maxNumberOfDevices`, throughput budgets, `qosProfiles`, and `defaultQosProfile`.
-
----
-
-#### `camara_get_profile`
-
-Fetches full details of a single network profile by UUID.
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `profileId` | string (UUID) | Yes | UUID of the profile. |
-| `response_format` | `markdown` \| `json` | No | Output format. Default: `markdown`. |
-
-**Errors** — `404` Profile not found.
-
----
-
-### Group 3 — Accesses
-
-An access grant ties a device to a network and controls which QoS profiles that device may use.
-
-#### `camara_list_accesses`
-
-Lists device access grants, optionally scoped to a specific network.
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `networkId` | string (UUID) | No | Filter to a specific network. Omit to return all accesses. |
-| `response_format` | `markdown` \| `json` | No | Output format. Default: `markdown`. |
-
-**Returns** — Each access contains `id`, `status`, `networkId`, `device`, `defaultQosProfile`, `qosProfiles`, and `sink`.
-
----
-
-#### `camara_get_access`
-
-Fetches the current state of a single access grant by UUID.
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `accessId` | string (UUID) | Yes | UUID of the access grant. |
-| `response_format` | `markdown` \| `json` | No | Output format. Default: `markdown`. |
-
-**Returns** — Full access object including `statusInfo` (reason code if `REJECTED`).
-
-**Errors** — `404` Access not found.
-
----
-
-#### `camara_create_access`
-
-Grants a device access to a dedicated network.
-
-**Token type determines how the device is identified:**
-
-| Token type | `device` field |
-|---|---|
-| 2-legged | **Required** — provide `phoneNumber`, `ipv4Address`, or `ipv6Address`. |
-| 3-legged | **Must be omitted** — device is derived from the token. |
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `networkId` | string (UUID) | Yes | Target network. |
-| `device` | object | Conditional | Device identifier (see above). |
-| `qosProfiles` | list of strings | No | Allowed QoS profiles for this device. Omit to allow all. |
-| `defaultQosProfile` | string | No | Default QoS profile for this device. |
-| `sink` | string (HTTPS URL) | No | Webhook for status-change notifications. |
-| `sinkCredential` | object | No | Auth credentials for the webhook. |
-
-**Returns** — Created access object with its `accessId`.
-
-**Errors** — `400` Invalid device identifier. `404` Network not found. `422` Device identifier rule violated.
-
----
-
-#### `camara_delete_access`
-
-Revokes a device's access grant. Irreversible.
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `accessId` | string (UUID) | Yes | UUID of the access grant to revoke. |
-
-**Errors** — `404` Access not found.
-
----
-
-### Group 4 — Service Areas
-
-Service areas are read-only geographic regions defined by the CSP.
-
-#### `camara_retrieve_service_areas`
-
-Searches for service areas using geographic and/or profile filters. All filters are optional and AND-combined.
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `atLocation` | `{ latitude, longitude }` | No | A point that must be covered by the area. |
-| `overlappingArea` | `{ areaType: 'CIRCLE'\|'POLYGON', … }` | No | Shape that must overlap the area. |
-| `coveringArea` | `{ areaType: 'CIRCLE'\|'POLYGON', … }` | No | Shape that the area must fully contain. |
-| `byName` | string | No | Exact area name. |
-| `byNetworkProfileId` | string (UUID) | No | Only areas supporting this network profile. |
-| `byQosProfileName` | string | No | Only areas supporting this QoS profile name. |
-| `response_format` | `markdown` \| `json` | No | Output format. Default: `markdown`. |
-
-**Returns** — Each area contains `id`, `name`, `description`, `area` geometry, `networkProfiles`, and `qosProfiles`, plus a geojson.io URL to view it (`geojsonUrl`, or `geojsonNote` if the geometry cannot be drawn). See [Visualizing service areas](#visualizing-service-areas-geojson).
-
----
-
-#### `camara_get_area`
-
-Fetches the full details of a single service area by UUID.
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `areaId` | string (UUID) | Yes | UUID of the service area. |
-| `response_format` | `markdown` \| `json` | No | Output format. Default: `markdown`. |
-
-**Errors** — `404` Area not found.
-
----
-
-#### `camara_pick_location` (temporarily disabled)
-
-> **Disabled:** this tool is not registered while `ENABLE_MAP_PICKER = False`
-> in `server.py`. Use the GeoJSON URLs returned by the area tools instead
-> (see [Visualizing service areas](#visualizing-service-areas-geojson)).
-
-Opens an interactive map (see [Interactive Map Picker](#interactive-map-picker-mcp-apps)
-below) so the user can point at a location instead of typing coordinates.
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `latitude` | number | No | Initial map center latitude. Omit to fit all areas. |
-| `longitude` | number | No | Initial map center longitude. Omit to fit all areas. |
-| `zoom` | integer (0-22) | No | Initial map zoom level. Omit to fit all areas. |
-| `byNetworkProfileId` | string (UUID) | No | Only show areas supporting this network profile. |
-| `byQosProfileName` | string | No | Only show areas supporting this QoS profile name. |
-
-Returns JSON with `areas`, a computed `bounds` bounding box, `tileUrl`, and
-`center`/`zoom` (only echoed back if the caller passed them). The chosen
-location and `serviceAreaId` arrive later as a follow-up user message once
-the user confirms a selection on the map — this tool does not return them
-directly.
-
----
-
-## Visualizing service areas (GeoJSON)
-
-Every time a service area is returned, the server also generates a
-[geojson.io](https://geojson.io) URL that draws it on a map — no local build or
-map hosting needed. The GeoJSON is embedded in the URL itself.
-
-| Tool | Where the URL appears |
-|---|---|
-| `camara_get_area` | Markdown: `GeoJSON map: [View area](…)` line. JSON: `geojsonUrl` field on the area. |
-| `camara_retrieve_service_areas` | Markdown: one link per area, plus an "All areas on one map" link when there are several. JSON: `geojsonUrl` on each area, plus a top-level `geojsonUrl` showing **all** returned areas together. |
-| `camara_pick_location` (when enabled) | JSON: `geojsonUrl` on each area, plus a top-level `geojsonUrl` for all of them. |
-
-Notes:
-- GeoJSON has no circle type, so `CIRCLE` areas are approximated by a 64-point polygon.
-- Areas with missing or malformed geometry get no URL. Instead they carry a
-  `geojsonNote` field (JSON) or an "unavailable" line (Markdown), so the absence
-  is always explicit.
-- Areas with many vertices produce long URLs (the whole GeoJSON is in the link):
-  roughly 12,700 characters for a 500-vertex polygon.
-
-### Making sure the link reaches the user
-
-The server attaches the link to every area it returns, but the assistant still
-has to relay it. To make that reliable, the rule is stated in three places:
-
-1. **Server instructions** — sent to the host when the connection is
-   initialised, so they apply to every tool and prompt.
-2. **Tool descriptions** of `camara_retrieve_service_areas`, `camara_get_area`
-   and `camara_pick_location`.
-3. **Workflow prompts** `dedicated_network_workflow` and
-   `discover_profiles_and_areas`.
-
-The rule: whenever an area is shown to the user, include its GeoJSON link, copied
-in full and unmodified — unless that exact link was given in the immediately
-preceding message. Instructions can only guide the assistant, not force it, so
-this is a strong nudge rather than a hard guarantee.
-
-The wording lives in one place, `GEOJSON_LINK_RULE` in `camara/geo.py`.
-
----
-
-## Interactive Map Picker (MCP Apps) — temporarily disabled
-
-> **Status:** disabled because the map does not yet work as required. The code
-> (`camara/ui.py`, `camara/tools/picker.py`, `ui/`) is kept intact. To re-enable
-> it, set `ENABLE_MAP_PICKER = True` in `server.py`; the tool count then goes
-> from 12 back to 13. Building the view (below) is only needed in that case.
-
-`camara_pick_location` opens an interactive Leaflet map inside the chat (via
-the [MCP Apps](https://modelcontextprotocol.io/specification/draft/extensions/apps)
-extension, `io.modelcontextprotocol/ui`) so the user can point at a location
-instead of typing coordinates:
-
-1. The map opens showing every available service area, dimmed.
-2. Clicking a point calls `camara_retrieve_service_areas` (with `atLocation`)
-   and highlights the areas covering it, in a side panel ordered from the
-   smallest (most specific) to the largest.
-3. An optional "draw a circle" mode (checkbox above the panel) lets the user
-   click-and-drag instead, querying with `overlappingArea` rather than
-   `atLocation`.
-4. Clicking "Usar esta área" sends the chosen coordinates, `serviceAreaId`,
-   name, and available profiles back into the conversation — continue from
-   there with `camara_list_profiles` and `camara_create_network`.
-
-### Building the view
-
-The map is a small Vite + Leaflet project at `ui/area-picker/`, bundled with
-[`vite-plugin-singlefile`](https://github.com/richardtallent/vite-plugin-singlefile)
-into one self-contained HTML file (Leaflet and the MCP Apps client SDK
-inlined, no CDN). **It must be built before starting the server**, or
-`camara_pick_location`'s map resource will fail to read:
-
-```bash
-cd ui/area-picker
-npm install
-npm run build
+## Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CAMARA_API_ROOT` | Base URL of your CAMARA API server | `http://localhost:9091` |
+| `CAMARA_ACCESS_TOKEN` | Bearer token for authentication | *(empty; no auth header sent)* |
+| `CAMARA_MAP_TILE_URL` | XYZ tile URL template for the `camara_pick_location` map (only used if the map picker is re-enabled) | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` |
+
+### Claude Desktop (Windows)
+
+Open the Claude Desktop configuration file `%APPDATA%\Claude\claude_desktop_config.json` (paste that path into the
+Explorer address bar; create the file if it does not exist) and add this block inside `"mcpServers"`:
+
+```json
+{
+  "mcpServers": {
+    "camara-dedicated-networks": {
+      "command": "python",
+      "args": [
+        "C:\\path\\to\\camara-dedicated-networks-mcp-python\\server.py"
+      ],
+      "env": {
+        "CAMARA_API_ROOT": "https://your-api-server.example.com",
+        "CAMARA_ACCESS_TOKEN": "your-bearer-token-here"
+      }
+    }
+  }
+}
 ```
 
-This writes `ui/dist/area_picker.html`, which `camara/ui.py` serves as the
-`ui://camara/area-picker` resource. If you don't rebuild after editing
-`ui/area-picker/src/`, the server keeps serving the previous build — there's
-no watch step wired into `python server.py`.
+Replace `CAMARA_API_ROOT` with the URL of your CAMARA API server and `CAMARA_ACCESS_TOKEN` with your bearer token, then
+restart Claude Desktop.
 
-`ui/dist/` is **not** committed (it's covered by the root `.gitignore`'s
-`dist/` rule) — it's a regenerated build artifact, and Leaflet + the MCP Apps
-SDK bundled in make it a few hundred KB, not worth tracking in git.
+### OpenCode
 
-### Tile server
+[OpenCode](https://opencode.ai) reads MCP servers from an `opencode.json` (or `opencode.jsonc`): in the project root
+(highest precedence), or globally in `~/.config/opencode/opencode.json`. Add this block (create the file if it does not
+exist):
 
-Map tiles come from `CAMARA_MAP_TILE_URL` (see
-[Environment variables](#environment-variables)), an XYZ template like
-`https://tile.openstreetmap.org/{z}/{x}/{y}.png`. Its hostname is the only
-external origin the view's Content-Security-Policy allows — tiles load as
-`<img>` sources, so it's declared under the resource's `resourceDomains`
-(not `connectDomains`).
+```json
+{
+  "mcp": {
+    "camara-dedicated-networks": {
+      "type": "local",
+      "command": [
+        "python",
+        "C:\\path\\to\\camara-dedicated-networks-mcp-python\\server.py"
+      ],
+      "enabled": true,
+      "environment": {
+        "CAMARA_API_ROOT": "https://your-api-server.example.com",
+        "CAMARA_ACCESS_TOKEN": "your-bearer-token-here"
+      }
+    }
+  }
+}
+```
 
-### Known issue
+Replace `CAMARA_API_ROOT` and `CAMARA_ACCESS_TOKEN` as above. On macOS or Linux use a forward-slash path (for example
+`/path/to/rt-camara-examples/mcp-servers/dedicated-networks/server.py`) and, if needed, point `command` at your `python3`
+binary. Restart OpenCode to pick up the server. Its tools then have the prefix `camara-dedicated-networks_`, for example
+`camara-dedicated-networks_camara_list_profiles`.
 
-There's an open upstream issue (`ext-apps` #671) about MCP Apps UIs not
-rendering in Claude Desktop for Windows when going through the `mcp-remote`
-proxy. If the tool runs but no map appears, try connecting directly instead
-of through `mcp-remote` before assuming the view itself is broken.
-
----
-
-## Recommended workflow
-
-### Pre-conditions (operator side)
-
-Before calling the API, the following should already be in place:
-- The API invoker has signed up with the API provider.
-- QoS Profiles, Network Profiles, and Service Areas have been defined by the operator.
-
-### Phase 1 — Before using the network
-
-| Step | Tool | What to do |
-|------|------|-----------|
-| 1.1a | `camara_list_profiles` | Discover available profiles — save the `id` that fits your requirements. |
-| 1.1b | `camara_retrieve_service_areas` | Find a service area covering your location — save its `id`. |
-| 1.2 | `camara_create_network` | Reserve a network with `profileId`, `serviceAreaId`, and `serviceTime`. |
-| 1.3 | `camara_get_network` | Monitor status: `REQUESTED → RESERVED → ACTIVATED`. |
-| 1.4 | `camara_create_access` | Grant a device access using the returned `networkId`. |
-
-### Phase 2 — During operation
-
-| Step | Tool | What to do |
-|------|------|-----------|
-| 2.1 | `camara_get_network` | Confirm status is `ACTIVATED`. |
-| 2.2 | `camara_create_access` / `camara_delete_access` | Add or remove devices dynamically. |
-| 2.3 | `camara_get_access` | Check device access status: `REQUESTED → GRANTED / REJECTED`. |
-
-### Phase 3 — Dismantling
-
-| Step | Tool | What to do |
-|------|------|-----------|
-| 3.1 | `camara_delete_access` | Revoke each device access. |
-| 3.2 | `camara_delete_network` | Cancel the network reservation. |
-
-> **Tip:** The server also exposes four **prompts** for interactive guidance:
-> `dedicated_network_workflow`, `discover_profiles_and_areas`, `manage_device_access`, `teardown_network`.
-
----
-
-## Understanding the code
+## Development
 
 ```
-server.py                   Entry point — creates the FastMCP instance and
+server.py                   Entry point: creates the FastMCP instance and
                             registers all tool groups and prompts.
 camara/
   config.py                 Reads CAMARA_API_ROOT and CAMARA_ACCESS_TOKEN
@@ -624,15 +195,25 @@ camara/
     areas.py                camara_retrieve_service_areas, camara_get_area
 ```
 
-Each tool follows the same pattern:
-1. A **Pydantic model** validates what Claude passes in
-2. The `@mcp.tool` decorator registers it with the MCP server
-3. The function body calls `_api_request()` and formats the result
-4. Errors are caught and turned into readable messages by `_handle_error()`
+Each tool has a Pydantic model that validates what the assistant passes in, is registered with the `@mcp.tool`
+decorator, calls `_api_request()` and formats the result, and has its errors turned into readable messages by
+`_handle_error()`. All tools accept `response_format: 'json'` to return the raw API payload instead of Markdown.
 
-All tools accept `response_format: 'json'` to retrieve raw API payloads instead of formatted Markdown.
+The test suite has 42 cases:
 
----
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+## Contributing
+
+Contributions are welcome. How to raise an issue, fork the repository and open a pull request, and the Contributor
+License Agreement required before code can be merged, are described at <https://www.5g-mag.com/contributing>.
+
+## License
+
+Distributed under the 5G-MAG Public License v1.0. See [LICENSE](../../LICENSE).
 
 ## Acknowledgement
 
