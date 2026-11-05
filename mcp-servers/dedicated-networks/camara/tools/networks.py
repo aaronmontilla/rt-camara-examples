@@ -19,6 +19,7 @@ from typing import Any, Dict, List
 from mcp.server.mcpserver import MCPServer as FastMCP
 
 from camara.client import api_request, tool_error
+from camara.flat import flat_arguments
 from camara.formatters import fmt_network
 from camara.models import (
     CreateNetworkInput,
@@ -44,6 +45,7 @@ def register_network_tools(mcp: FastMCP) -> None:
             "openWorldHint": True,
         },
     )
+    @flat_arguments
     async def camara_list_networks(params: ListNetworksInput) -> str:
         """List all dedicated networks that belong to you.
 
@@ -54,7 +56,7 @@ def register_network_tools(mcp: FastMCP) -> None:
           TERMINATED — network has ended; only deletion is possible
 
         Args:
-            params.response_format: 'markdown' (default) or 'json'.
+            response_format: 'markdown' (default) or 'json'.
 
         Returns:
             List of networks. Each has: id, status, serviceAreaId,
@@ -91,6 +93,7 @@ def register_network_tools(mcp: FastMCP) -> None:
             "openWorldHint": True,
         },
     )
+    @flat_arguments
     async def camara_get_network(params: GetNetworkInput) -> str:
         """Get the current details of a specific dedicated network by its UUID.
 
@@ -98,8 +101,8 @@ def register_network_tools(mcp: FastMCP) -> None:
         and full configuration of a previously created network.
 
         Args:
-            params.networkId (str): UUID of the network.
-            params.response_format: 'markdown' (default) or 'json'.
+            networkId (str): UUID of the network.
+            response_format: 'markdown' (default) or 'json'.
 
         Returns:
             Network details: id, status, serviceAreaId, serviceTime,
@@ -136,6 +139,7 @@ def register_network_tools(mcp: FastMCP) -> None:
             "openWorldHint": True,
         },
     )
+    @flat_arguments
     async def camara_create_network(params: CreateNetworkInput) -> str:
         """Create a new dedicated network reservation.
 
@@ -154,12 +158,12 @@ def register_network_tools(mcp: FastMCP) -> None:
         The returned networkId is required to grant device access via camara_create_access.
 
         Args:
-            params.serviceAreaId (str): UUID of the service area.
-            params.serviceTime: {start, end} RFC 3339 timestamps.
-            params.networkProfileId (optional str): profile UUID (exclusive with qosProfileName).
-            params.qosProfileName (optional str): QoS name (exclusive with networkProfileId).
-            params.sink (optional str): HTTPS notification callback URL.
-            params.sinkCredential (optional): credentials for the callback.
+            serviceAreaId (str): UUID of the service area.
+            serviceTime: {start, end} RFC 3339 timestamps.
+            networkProfileId (optional str): profile UUID (exclusive with qosProfileName).
+            qosProfileName (optional str): QoS name (exclusive with networkProfileId).
+            sink (optional str): HTTPS notification callback URL.
+            sinkCredential (optional): credentials for the callback.
 
         Returns:
             Created network with: id (store as networkId), status='REQUESTED',
@@ -217,6 +221,7 @@ def register_network_tools(mcp: FastMCP) -> None:
             "openWorldHint": True,
         },
     )
+    @flat_arguments
     async def camara_delete_network(params: DeleteNetworkInput) -> str:
         """Delete (cancel) a dedicated network reservation. This cannot be undone.
 
@@ -224,7 +229,7 @@ def register_network_tools(mcp: FastMCP) -> None:
         should be deleted first via camara_delete_access.
 
         Args:
-            params.networkId (str): UUID of the network to delete.
+            networkId (str): UUID of the network to delete.
 
         Returns:
             Confirmation message on success.

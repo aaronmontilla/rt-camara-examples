@@ -21,6 +21,7 @@ from typing import Any, Dict, List
 from mcp.server.apps import Apps
 
 from camara.client import api_request, tool_error
+from camara.flat import flat_arguments
 from camara.config import MAP_TILE_URL
 from camara.geo import combined_bounds, combined_geojson_url, with_geojson_url
 from camara.models import PickLocationInput
@@ -42,6 +43,7 @@ def register_picker_tool(apps: Apps) -> None:
             "openWorldHint": True,
         },
     )
+    @flat_arguments
     async def camara_pick_location(params: PickLocationInput) -> str:
         """Open an interactive map so the user can point at the location where a
         dedicated network is needed.
@@ -53,12 +55,12 @@ def register_picker_tool(apps: Apps) -> None:
         camara_create_network.
 
         Args:
-            params.latitude / params.longitude (optional): initial map center.
+            latitude / longitude (optional): initial map center.
                 Omit both to let the map fit all returned areas.
-            params.zoom (optional): initial map zoom level (0-22).
-            params.byNetworkProfileId (optional): only show areas supporting
+            zoom (optional): initial map zoom level (0-22).
+            byNetworkProfileId (optional): only show areas supporting
                 this network profile UUID.
-            params.byQosProfileName (optional): only show areas supporting this
+            byQosProfileName (optional): only show areas supporting this
                 QoS profile name.
 
         Returns:

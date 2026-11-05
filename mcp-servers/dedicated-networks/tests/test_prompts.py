@@ -8,7 +8,6 @@ against the input model of the tool it introduces.
 """
 
 import re
-import typing
 
 # "**`camara_xxx`** with:" followed by its bullet list
 _PARAMETER_BLOCK = re.compile(r"\*\*`(camara_\w+)`\*\* with:\n((?:- .*\n|  .*\n)+)")
@@ -17,8 +16,8 @@ _BULLET_NAME = re.compile(r"^- (?:\*\*)?`([A-Za-z_]\w*)`")
 
 
 def _input_fields(tool) -> set:
-    model = typing.get_type_hints(tool.fn)["params"]
-    return set(model.model_fields)
+    """The argument names the tool publishes in its input schema."""
+    return set(tool.parameters["properties"])
 
 
 def test_prompt_parameter_lists_match_tool_input_models():

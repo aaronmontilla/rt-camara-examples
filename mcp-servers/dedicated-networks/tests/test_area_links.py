@@ -21,7 +21,7 @@ from camara.geo import (
     geojson_url,
     with_geojson_url,
 )
-from camara.models import GetAreaInput, ResponseFormat, RetrieveAreasInput
+from camara.models import ResponseFormat
 from camara.tools import areas as areas_module
 
 GEOJSON_PREFIX = "https://geojson.io/#data=data:application/json,"
@@ -148,7 +148,7 @@ def test_retrieve_json_gives_each_area_a_url_and_a_combined_url(monkeypatch):
     _patch_api(monkeypatch, [CIRCLE_AREA, POLYGON_AREA])
     fn = _tool("camara_retrieve_service_areas").fn
 
-    result = json.loads(asyncio.run(fn(RetrieveAreasInput(response_format=ResponseFormat.JSON))))
+    result = json.loads(asyncio.run(fn(response_format=ResponseFormat.JSON)))
 
     assert all(a["geojsonUrl"].startswith(GEOJSON_PREFIX) for a in result["areas"])
     assert len(_decode(result["geojsonUrl"])["features"]) == 2
@@ -158,7 +158,7 @@ def test_retrieve_json_flags_areas_without_a_link(monkeypatch):
     _patch_api(monkeypatch, [CIRCLE_AREA, BROKEN_AREA])
     fn = _tool("camara_retrieve_service_areas").fn
 
-    result = json.loads(asyncio.run(fn(RetrieveAreasInput(response_format=ResponseFormat.JSON))))
+    result = json.loads(asyncio.run(fn(response_format=ResponseFormat.JSON)))
 
     by_id = {a["id"]: a for a in result["areas"]}
     assert "geojsonUrl" in by_id[CIRCLE_AREA["id"]]
@@ -169,7 +169,7 @@ def test_retrieve_json_without_areas_has_no_combined_url(monkeypatch):
     _patch_api(monkeypatch, [])
     fn = _tool("camara_retrieve_service_areas").fn
 
-    result = json.loads(asyncio.run(fn(RetrieveAreasInput(response_format=ResponseFormat.JSON))))
+    result = json.loads(asyncio.run(fn(response_format=ResponseFormat.JSON)))
 
     assert result == {"areas": [], "count": 0}
 
@@ -178,7 +178,7 @@ def test_retrieve_markdown_links_every_area_and_the_combined_map(monkeypatch):
     _patch_api(monkeypatch, [CIRCLE_AREA, POLYGON_AREA])
     fn = _tool("camara_retrieve_service_areas").fn
 
-    out = asyncio.run(fn(RetrieveAreasInput()))
+    out = asyncio.run(fn())
 
     assert out.count("**GeoJSON map**: [View area](") == 2
     assert "[View all areas](" in out
@@ -188,7 +188,7 @@ def test_retrieve_markdown_single_area_has_no_redundant_combined_link(monkeypatc
     _patch_api(monkeypatch, [CIRCLE_AREA])
     fn = _tool("camara_retrieve_service_areas").fn
 
-    out = asyncio.run(fn(RetrieveAreasInput()))
+    out = asyncio.run(fn())
 
     assert "[View area](" in out
     assert "[View all areas](" not in out
@@ -198,7 +198,7 @@ def test_retrieve_markdown_states_when_an_area_has_no_link(monkeypatch):
     _patch_api(monkeypatch, [BROKEN_AREA])
     fn = _tool("camara_retrieve_service_areas").fn
 
-    out = asyncio.run(fn(RetrieveAreasInput()))
+    out = asyncio.run(fn())
 
     assert "unavailable" in out
     assert GEOJSON_UNAVAILABLE_NOTE in out
@@ -210,9 +210,9 @@ def test_get_area_json_and_markdown_both_carry_the_link(monkeypatch):
     area_id = CIRCLE_AREA["id"]
 
     as_json = json.loads(
-        asyncio.run(fn(GetAreaInput(areaId=area_id, response_format=ResponseFormat.JSON)))
+        asyncio.run(fn(areaId=area_id, response_format=ResponseFormat.JSON))
     )
-    as_md = asyncio.run(fn(GetAreaInput(areaId=area_id)))
+    as_md = asyncio.run(fn(areaId=area_id))
 
     assert as_json["geojsonUrl"].startswith(GEOJSON_PREFIX)
     assert as_json["geojsonUrl"] in as_md
@@ -223,7 +223,7 @@ def test_get_area_json_flags_missing_link(monkeypatch):
     fn = _tool("camara_get_area").fn
 
     out = json.loads(
-        asyncio.run(fn(GetAreaInput(areaId="broken-1", response_format=ResponseFormat.JSON)))
+        asyncio.run(fn(areaId="broken-1", response_format=ResponseFormat.JSON))
     )
 
     assert out["geojsonNote"] == GEOJSON_UNAVAILABLE_NOTE
@@ -245,9 +245,8 @@ def test_picker_areas_carry_links(monkeypatch):
     picker_module.register_picker_tool(apps)
     fn = next(b.fn for b in apps.tools() if b.fn.__name__ == "camara_pick_location")
 
-    from camara.models import PickLocationInput
 
-    result = json.loads(asyncio.run(fn(PickLocationInput())))
+    result = json.loads(asyncio.run(fn()))
 
     assert result["areas"][0]["geojsonUrl"].startswith(GEOJSON_PREFIX)
     assert result["areas"][1]["geojsonNote"] == GEOJSON_UNAVAILABLE_NOTE

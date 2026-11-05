@@ -3,7 +3,7 @@ tests/test_picker_tool.py
 ───────────────────────────
 Exercises camara_pick_location itself (the plain async function — the
 Apps.tool()/mcp.tool() decorators return fn unchanged, so it's callable
-directly with asyncio.run, no test client needed).
+directly with asyncio.run and keyword arguments, no test client needed).
 """
 
 import asyncio
@@ -11,7 +11,6 @@ import json
 
 import pytest
 
-from camara.models import PickLocationInput
 from camara.tools import picker as picker_module
 
 CIRCLE_AREA = {
@@ -47,7 +46,7 @@ def test_returns_areas_bounds_and_tile_url(monkeypatch):
     monkeypatch.setattr(picker_module, "api_request", fake_api_request)
     tool = _register_and_get_tool()
 
-    result = json.loads(asyncio.run(tool(PickLocationInput())))
+    result = json.loads(asyncio.run(tool()))
 
     assert len(result["areas"]) == 1
     assert {k: v for k, v in result["areas"][0].items() if k != "geojsonUrl"} == CIRCLE_AREA
@@ -66,7 +65,7 @@ def test_passes_through_explicit_center_and_zoom(monkeypatch):
     monkeypatch.setattr(picker_module, "api_request", fake_api_request)
     tool = _register_and_get_tool()
 
-    result = json.loads(asyncio.run(tool(PickLocationInput(latitude=48.8, longitude=2.3, zoom=14))))
+    result = json.loads(asyncio.run(tool(latitude=48.8, longitude=2.3, zoom=14)))
 
     assert result["center"] == {"latitude": 48.8, "longitude": 2.3}
     assert result["zoom"] == 14
@@ -82,7 +81,7 @@ def test_forwards_profile_filters_in_request_body(monkeypatch):
     monkeypatch.setattr(picker_module, "api_request", fake_api_request)
     tool = _register_and_get_tool()
 
-    asyncio.run(tool(PickLocationInput(byNetworkProfileId="abc", byQosProfileName="QOS_S")))
+    asyncio.run(tool(byNetworkProfileId="abc", byQosProfileName="QOS_S"))
 
     assert seen_body == {"byNetworkProfileId": "abc", "byQosProfileName": "QOS_S"}
 
@@ -94,7 +93,7 @@ def test_empty_areas_returns_message_not_an_error(monkeypatch):
     monkeypatch.setattr(picker_module, "api_request", fake_api_request)
     tool = _register_and_get_tool()
 
-    result = json.loads(asyncio.run(tool(PickLocationInput())))
+    result = json.loads(asyncio.run(tool()))
 
     assert result["areas"] == []
     assert result["bounds"] is None
@@ -112,4 +111,4 @@ def test_connection_error_is_raised_as_a_readable_tool_error(monkeypatch):
     tool = _register_and_get_tool()
 
     with pytest.raises(ToolError, match="Cannot connect"):
-        asyncio.run(tool(PickLocationInput()))
+        asyncio.run(tool())

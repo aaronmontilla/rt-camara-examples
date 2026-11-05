@@ -41,6 +41,7 @@ from camara.prompts         import register_prompts
 from camara.ui              import build_apps_extension
 from camara.geo             import GEOJSON_LINK_RULE
 from camara.config          import startup_line
+from camara.flat            import forbid_unknown_arguments
 
 # Sent to the host at initialisation, so it applies to every tool and prompt.
 SERVER_INSTRUCTIONS = (
@@ -69,6 +70,9 @@ register_network_tools(mcp)
 register_profile_tools(mcp)
 register_access_tools(mcp)
 register_area_tools(mcp)
+
+# Flattened tools (camara/flat.py) reject arguments they do not declare.
+forbid_unknown_arguments(mcp._tool_manager.list_tools())
 
 # ── Register workflow guidance prompts ────────────────────────────────────────
 register_prompts(mcp)

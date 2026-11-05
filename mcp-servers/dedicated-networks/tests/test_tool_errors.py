@@ -68,7 +68,7 @@ def test_every_registered_tool_has_arguments_in_this_test():
 @pytest.mark.parametrize("tool_name", sorted(TOOL_ARGUMENTS))
 def test_api_errors_are_raised_as_tool_errors_with_the_readable_message(failing_api, tool_name):
     with pytest.raises(ToolError) as info:
-        asyncio.run(server.mcp.call_tool(tool_name, {"params": TOOL_ARGUMENTS[tool_name]}))
+        asyncio.run(server.mcp.call_tool(tool_name, TOOL_ARGUMENTS[tool_name]))
     assert "Error 404 Not Found — The specified resource is not found. Verify the ID is correct." in str(info.value)
 
 
@@ -77,7 +77,7 @@ def test_a_successful_call_is_not_an_error(monkeypatch):
         return []
 
     monkeypatch.setattr(networks, "api_request", fake_api_request)
-    result = asyncio.run(server.mcp.call_tool("camara_list_networks", {"params": {}}))
+    result = asyncio.run(server.mcp.call_tool("camara_list_networks", {}))
     assert not result.is_error
 
 
@@ -122,7 +122,7 @@ def test_over_stdio_a_failed_call_comes_back_with_is_error_set():
         assert "result" in srv.response(1)
         srv.send({"jsonrpc": "2.0", "method": "notifications/initialized"})
         srv.send({"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {
-            "name": "camara_get_network", "arguments": {"params": {"networkId": "n1"}}}})
+            "name": "camara_get_network", "arguments": {"networkId": "n1"}}})
         result = srv.response(2)["result"]
     finally:
         srv.close()
