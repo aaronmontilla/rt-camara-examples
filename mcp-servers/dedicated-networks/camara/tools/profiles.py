@@ -17,6 +17,7 @@ from typing import Any, Dict, List
 from mcp.server.mcpserver import MCPServer as FastMCP
 
 from camara.client import api_request, tool_error
+from camara.flat import flat_arguments
 from camara.formatters import fmt_profile
 from camara.models import GetProfileInput, ListProfilesInput, ResponseFormat
 
@@ -36,6 +37,7 @@ def register_profile_tools(mcp: FastMCP) -> None:
             "openWorldHint": True,
         },
     )
+    @flat_arguments
     async def camara_list_profiles(params: ListProfilesInput) -> str:
         """List all network profiles available to you, optionally filtered by name.
 
@@ -49,8 +51,8 @@ def register_profile_tools(mcp: FastMCP) -> None:
         network with camara_create_network.
 
         Args:
-            params.name (optional str): Exact profile name to filter by.
-            params.response_format: 'markdown' (default) or 'json'.
+            name (optional str): Exact profile name to filter by.
+            response_format: 'markdown' (default) or 'json'.
 
         Returns:
             List of profiles. Each profile has: id, name, maxNumberOfDevices,
@@ -91,6 +93,7 @@ def register_profile_tools(mcp: FastMCP) -> None:
             "openWorldHint": True,
         },
     )
+    @flat_arguments
     async def camara_get_profile(params: GetProfileInput) -> str:
         """Get the full details of a specific network profile by its UUID.
 
@@ -98,8 +101,8 @@ def register_profile_tools(mcp: FastMCP) -> None:
         supported QoS profiles) before creating a network with that profile.
 
         Args:
-            params.profileId (str): UUID of the network profile.
-            params.response_format: 'markdown' (default) or 'json'.
+            profileId (str): UUID of the network profile.
+            response_format: 'markdown' (default) or 'json'.
 
         Returns:
             Profile details: id, name, maxNumberOfDevices,

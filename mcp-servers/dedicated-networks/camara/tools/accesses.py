@@ -19,6 +19,7 @@ from typing import Any, Dict, List
 from mcp.server.mcpserver import MCPServer as FastMCP
 
 from camara.client import api_request, tool_error
+from camara.flat import flat_arguments
 from camara.formatters import fmt_access
 from camara.models import (
     CreateAccessInput,
@@ -44,6 +45,7 @@ def register_access_tools(mcp: FastMCP) -> None:
             "openWorldHint": True,
         },
     )
+    @flat_arguments
     async def camara_list_accesses(params: ListAccessesInput) -> str:
         """List device access grants, optionally filtered by network.
 
@@ -54,9 +56,9 @@ def register_access_tools(mcp: FastMCP) -> None:
           DELETED   — access has been removed
 
         Args:
-            params.networkId (optional str): Filter results to a specific network UUID.
+            networkId (optional str): Filter results to a specific network UUID.
                 Omit to return accesses across all your networks.
-            params.response_format: 'markdown' (default) or 'json'.
+            response_format: 'markdown' (default) or 'json'.
 
         Returns:
             List of device accesses. Each has: id, status, networkId, device,
@@ -99,6 +101,7 @@ def register_access_tools(mcp: FastMCP) -> None:
             "openWorldHint": True,
         },
     )
+    @flat_arguments
     async def camara_get_access(params: GetAccessInput) -> str:
         """Get the current details of a specific device access grant by its UUID.
 
@@ -106,8 +109,8 @@ def register_access_tools(mcp: FastMCP) -> None:
         and QoS configuration of a previously created access.
 
         Args:
-            params.accessId (str): UUID of the device access grant.
-            params.response_format: 'markdown' (default) or 'json'.
+            accessId (str): UUID of the device access grant.
+            response_format: 'markdown' (default) or 'json'.
 
         Returns:
             Access details: id, status, networkId, device, defaultQosProfile,
@@ -144,6 +147,7 @@ def register_access_tools(mcp: FastMCP) -> None:
             "openWorldHint": True,
         },
     )
+    @flat_arguments
     async def camara_create_access(params: CreateAccessInput) -> str:
         """Grant a device access to a dedicated network.
 
@@ -157,13 +161,13 @@ def register_access_tools(mcp: FastMCP) -> None:
         qosProfiles (a subset of what the network allows). Omit to allow all.
 
         Args:
-            params.networkId (str): UUID of the dedicated network.
-            params.device (optional): Device identifier (phone number, IPv4, or IPv6).
+            networkId (str): UUID of the dedicated network.
+            device (optional): Device identifier (phone number, IPv4, or IPv6).
                 Required with two-legged token; omit with three-legged token.
-            params.qosProfiles (optional list[str]): Allowed QoS profiles for this device.
-            params.defaultQosProfile (optional str): Default QoS profile for this device.
-            params.sink (optional str): HTTPS notification callback URL.
-            params.sinkCredential (optional): Credentials for the callback.
+            qosProfiles (optional list[str]): Allowed QoS profiles for this device.
+            defaultQosProfile (optional str): Default QoS profile for this device.
+            sink (optional str): HTTPS notification callback URL.
+            sinkCredential (optional): Credentials for the callback.
 
         Returns:
             Created access with: id (store as accessId), status='REQUESTED',
@@ -221,6 +225,7 @@ def register_access_tools(mcp: FastMCP) -> None:
             "openWorldHint": True,
         },
     )
+    @flat_arguments
     async def camara_delete_access(params: DeleteAccessInput) -> str:
         """Revoke a device access grant. This cannot be undone.
 
@@ -228,7 +233,7 @@ def register_access_tools(mcp: FastMCP) -> None:
         Delete all accesses before deleting the network itself.
 
         Args:
-            params.accessId (str): UUID of the device access grant to delete.
+            accessId (str): UUID of the device access grant to delete.
 
         Returns:
             Confirmation message on success.

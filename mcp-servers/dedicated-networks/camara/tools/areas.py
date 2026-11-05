@@ -17,6 +17,7 @@ from typing import Any, Dict, List
 from mcp.server.mcpserver import MCPServer as FastMCP
 
 from camara.client import api_request, tool_error
+from camara.flat import flat_arguments
 from camara.formatters import fmt_area
 from camara.geo import combined_geojson_url, with_geojson_url
 from camara.models import GetAreaInput, ResponseFormat, RetrieveAreasInput
@@ -37,6 +38,7 @@ def register_area_tools(mcp: FastMCP) -> None:
             "openWorldHint": True,
         },
     )
+    @flat_arguments
     async def camara_retrieve_service_areas(params: RetrieveAreasInput) -> str:
         """Search for network service areas using geographic or profile filters.
 
@@ -53,13 +55,13 @@ def register_area_tools(mcp: FastMCP) -> None:
           - byQosProfileName:    areas supporting a specific QoS profile name
 
         Args:
-            params.atLocation (optional): {latitude, longitude}
-            params.overlappingArea (optional): {areaType: 'CIRCLE'|'POLYGON', ...}
-            params.coveringArea (optional): same format as overlappingArea
-            params.byName (optional str)
-            params.byNetworkProfileId (optional str)
-            params.byQosProfileName (optional str)
-            params.response_format: 'markdown' (default) or 'json'
+            atLocation (optional): {latitude, longitude}
+            overlappingArea (optional): {areaType: 'CIRCLE'|'POLYGON', ...}
+            coveringArea (optional): same format as overlappingArea
+            byName (optional str)
+            byNetworkProfileId (optional str)
+            byQosProfileName (optional str)
+            response_format: 'markdown' (default) or 'json'
 
         Returns:
             List of matching service areas. Each has: id (use as serviceAreaId),
@@ -130,6 +132,7 @@ def register_area_tools(mcp: FastMCP) -> None:
             "openWorldHint": True,
         },
     )
+    @flat_arguments
     async def camara_get_area(params: GetAreaInput) -> str:
         """Get the full details of a specific service area by its UUID.
 
@@ -137,8 +140,8 @@ def register_area_tools(mcp: FastMCP) -> None:
         a known area before creating a network in it.
 
         Args:
-            params.areaId (str): UUID of the service area.
-            params.response_format: 'markdown' (default) or 'json'.
+            areaId (str): UUID of the service area.
+            response_format: 'markdown' (default) or 'json'.
 
         Returns:
             Area details: id, name, description, area geometry (CIRCLE or POLYGON),
