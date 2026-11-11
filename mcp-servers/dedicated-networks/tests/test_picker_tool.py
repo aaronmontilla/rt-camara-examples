@@ -1,9 +1,10 @@
 """
 tests/test_picker_tool.py
 ───────────────────────────
-Exercises camara_pick_location itself (the plain async function — the
+Exercises camara_pick_location itself (the async function — the
 Apps.tool()/mcp.tool() decorators return fn unchanged, so it's callable
-directly with asyncio.run and keyword arguments, no test client needed).
+directly with asyncio.run and keyword arguments, no test client needed). It
+returns a CallToolResult; text_of gives the text the model reads.
 """
 
 import asyncio
@@ -12,6 +13,7 @@ import json
 import pytest
 
 from camara.tools import picker as picker_module
+from tests.tool_results import text_of
 
 CIRCLE_AREA = {
     "id": "625b2d4b-4da7-4f07-9169-e60ffdf76671",
@@ -26,17 +28,18 @@ CIRCLE_AREA = {
 }
 
 
-def _register_and_get_tool():
+def _register_and_get_tool(text=True):
     from mcp.server.apps import Apps
 
     apps = Apps()
     apps.add_html_resource(picker_module.AREA_PICKER_URI, "<html></html>")
     picker_module.register_picker_tool(apps)
-    return next(b.fn for b in apps.tools() if b.fn.__name__ == "camara_pick_location")
+    fn = next(b.fn for b in apps.tools() if b.fn.__name__ == "camara_pick_location")
+    return text_of(fn) if text else fn
 
 
 def test_returns_areas_bounds_and_tile_url(monkeypatch):
-    async def fake_api_request(api, path, method="GET", body=None, params=None):
+    async def fake_api_request(api, path, method="GET", body=None, params=None, read_only=False):
         assert api == "areas"
         assert path == "/retrieve-service-areas"
         assert method == "POST"
@@ -74,7 +77,7 @@ def test_passes_through_explicit_center_and_zoom(monkeypatch):
 def test_forwards_profile_filters_in_request_body(monkeypatch):
     seen_body = {}
 
-    async def fake_api_request(api, path, method="GET", body=None, params=None):
+    async def fake_api_request(api, path, method="GET", body=None, params=None, read_only=False):
         seen_body.update(body or {})
         return []
 
@@ -100,15 +103,15 @@ def test_empty_areas_returns_message_not_an_error(monkeypatch):
     assert "message" in result
 
 
-def test_connection_error_is_raised_as_a_readable_tool_error(monkeypatch):
+def test_connection_error_comes_back_as_a_readable_tool_error(monkeypatch):
     import httpx
-    from mcp.server.mcpserver.exceptions import ToolError
 
     async def fake_api_request(*args, **kwargs):
         raise httpx.ConnectError("boom")
 
     monkeypatch.setattr(picker_module, "api_request", fake_api_request)
-    tool = _register_and_get_tool()
+    tool = _register_and_get_tool(text=False)
 
-    with pytest.raises(ToolError, match="Cannot connect"):
-        asyncio.run(tool())
+    result = asyncio.run(tool())
+    assert result.is_error
+    assert "Cannot connect" in result.content[0].text

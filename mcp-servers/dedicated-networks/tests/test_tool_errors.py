@@ -66,10 +66,14 @@ def test_every_registered_tool_has_arguments_in_this_test():
 
 
 @pytest.mark.parametrize("tool_name", sorted(TOOL_ARGUMENTS))
-def test_api_errors_are_raised_as_tool_errors_with_the_readable_message(failing_api, tool_name):
-    with pytest.raises(ToolError) as info:
-        asyncio.run(server.mcp.call_tool(tool_name, TOOL_ARGUMENTS[tool_name]))
-    assert "Error 404 Not Found — The specified resource is not found. Verify the ID is correct." in str(info.value)
+def test_api_errors_come_back_as_tool_errors_with_the_readable_message(failing_api, tool_name):
+    result = asyncio.run(server.mcp.call_tool(tool_name, TOOL_ARGUMENTS[tool_name]))
+    assert result.is_error
+    # The same text MCP gives a ToolError raised by a tool: prefix, then the readable message.
+    assert result.content[0].text == (
+        f"Error executing tool {tool_name}: "
+        "Error 404 Not Found — The specified resource is not found. Verify the ID is correct."
+    )
 
 
 def test_a_successful_call_is_not_an_error(monkeypatch):
@@ -128,3 +132,5 @@ def test_over_stdio_a_failed_call_comes_back_with_is_error_set():
         srv.close()
     assert result["isError"] is True
     assert "Cannot connect to http://127.0.0.1:9/" in result["content"][0]["text"]
+    # The telemetry travels in the result's _meta (camara/telemetry.py).
+    assert result["_meta"]["backend_calls"][0]["error"] == "ConnectError"

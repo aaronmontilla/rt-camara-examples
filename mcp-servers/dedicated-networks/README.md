@@ -200,8 +200,14 @@ camara/
                             settings from environment variables.
   auth.py                   Access token: fixed, or obtained and renewed with
                             OAuth 2.0 client credentials.
-  client.py                 Shared async HTTP client (api_request), error
-                            messages (handle_error, tool_error).
+  client.py                 Shared async HTTP client (api_request), which
+                            keeps the connection to the API open between
+                            tool calls; error messages (handle_error,
+                            tool_error).
+  flat.py                   Publishes each input model's fields as the tool's
+                            own arguments; returns the result with telemetry.
+  telemetry.py              Per-call record of the CAMARA API requests,
+                            returned in the result's _meta.
   models.py                 Pydantic input models shared across tools.
   formatters.py             Turns API JSON responses into readable Markdown.
   geo.py                    Geometry helpers: bounding boxes and GeoJSON /
@@ -224,7 +230,20 @@ token that cannot be obtained), the tool raises `tool_error()`: the client recei
 text is the readable message from `handle_error()`, the same way invalid arguments are reported. All tools accept
 `response_format: 'json'` to return the raw API payload instead of Markdown.
 
-The test suite has 82 cases:
+Requests to the API share one HTTP client, so the TCP and TLS connection is reused between tool calls (idle
+connections are kept for 50 s). On a slow link this saves the connection set-up round trips on every call after the
+first. If the server has dropped the idle connection, the request is sent again on a new one when that is harmless (GET,
+DELETE, and the read-only POST of `camara_retrieve_service_areas`); a POST that creates a resource is never repeated.
+
+Every tool result, successful or not, carries in `_meta` what the call spent on the CAMARA APIs: one entry per HTTP
+request (method, URL, status, bytes, latency, whether it opened a new connection and how long that took), their
+totals, the OAuth token requests if the call made any, the time spent getting the token, and `gateway_latency_sec`,
+the time inside the tool function.
+The field names follow the backend telemetry read by the
+[6G AI Traffic Testbed](https://github.com/5G-MAG/6G-Testbed), which stores them with each tool call. Neither the
+token nor the client secret appears in it. The text the model reads is unchanged.
+
+The test suite has 125 cases:
 
 ```bash
 pip install -r requirements-dev.txt

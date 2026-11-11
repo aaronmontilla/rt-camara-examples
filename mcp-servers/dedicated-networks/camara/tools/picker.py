@@ -87,7 +87,7 @@ def register_picker_tool(apps: Apps) -> None:
                 body["byQosProfileName"] = params.byQosProfileName
 
             areas: List[Dict[str, Any]] = (
-                await api_request("areas", "/retrieve-service-areas", method="POST", body=body)
+                await api_request("areas", "/retrieve-service-areas", method="POST", body=body, read_only=True)
                 or []
             )
 

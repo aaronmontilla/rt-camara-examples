@@ -96,7 +96,7 @@ def register_area_tools(mcp: FastMCP) -> None:
                 body["byQosProfileName"] = params.byQosProfileName
 
             areas: List[Dict[str, Any]] = (
-                await api_request("areas", "/retrieve-service-areas", method="POST", body=body)
+                await api_request("areas", "/retrieve-service-areas", method="POST", body=body, read_only=True)
                 or []
             )
             all_url = combined_geojson_url(areas)
