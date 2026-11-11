@@ -40,8 +40,11 @@ import typing
 from typing import Annotated, Any, Awaitable, Callable, Iterable
 
 from mcp.server.mcpserver.exceptions import ToolError
+from mcp_types import CallToolResult, TextContent
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic_core import PydanticUndefined
+
+from camara import telemetry
 
 FLAT_ATTRIBUTE = "__camara_flat_model__"
 
@@ -69,15 +72,36 @@ def flat_arguments(fn: Callable[[Any], Awaitable[str]]) -> Callable[..., Awaitab
         )
 
     @functools.wraps(fn)
-    async def wrapper(**arguments: Any) -> str:
+    async def wrapper(**arguments: Any) -> CallToolResult:
         try:
             params = model(**arguments)
         except ValidationError as exc:
             # Checks that span several fields (e.g. the CreateNetworkInput oneOf) run here, after MCP has
-            # validated each argument. Report them the way MCP reports argument errors, so the model sees the
-            # reason instead of a bare "Error executing tool".
-            raise ToolError(f"Error executing tool {fn.__name__}: {exc}") from exc
-        return await fn(params)
+            # validated each argument. MCP prefixes "Error executing tool <name>: ", as for argument errors,
+            # so the model sees the reason instead of a bare "Error executing tool".
+            raise ToolError(str(exc)) from exc
+
+        # Record the CAMARA API requests the tool makes and return them in the result's _meta
+        # (camara/telemetry.py). The text the model reads is unchanged, for errors too.
+        token = telemetry.start()
+        try:
+            text = await fn(params)
+        except ToolError as exc:
+            recording = telemetry.stop(token)
+            return CallToolResult(
+                content=[TextContent(type="text", text=f"Error executing tool {fn.__name__}: {exc}")],
+                is_error=True,
+                _meta=telemetry.meta(recording),
+            )
+        except BaseException:
+            telemetry.stop(token)
+            raise
+        recording = telemetry.stop(token)
+        return CallToolResult(
+            content=[TextContent(type="text", text=text)],
+            structured_content={"result": text},  # what MCP sends for a tool that returns str
+            _meta=telemetry.meta(recording),
+        )
 
     wrapper.__signature__ = inspect.Signature(parameters, return_annotation=str)
     # functools.wraps copied fn's annotations (params: model); the signature above replaces them.

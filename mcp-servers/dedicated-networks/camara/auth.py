@@ -127,13 +127,18 @@ class TokenProvider:
         else:
             auth = (self._client_id, self._client_secret)
 
+        from camara import telemetry  # imported here: telemetry is optional for this module's users
+
+        started = time.perf_counter()
         try:
             async with httpx.AsyncClient(timeout=30.0, transport=self._transport) as client:
                 response = await client.post(
                     self._token_url, data=form, auth=auth, headers={"Accept": "application/json"}
                 )
         except httpx.HTTPError as e:
+            telemetry.record_token_call(None, self._token_url, time.perf_counter() - started, error=type(e).__name__)
             raise TokenError(f"cannot reach the token endpoint ({type(e).__name__})") from e
+        telemetry.record_token_call(response, self._token_url, time.perf_counter() - started)
 
         if response.status_code >= 400:
             raise TokenError(f"the token endpoint answered HTTP {response.status_code}{_oauth_error(response)}")

@@ -30,7 +30,7 @@ def _call(name, arguments):
 def captured_requests(monkeypatch):
     calls = []
 
-    async def fake_api_request(api, path, method="GET", body=None, params=None):
+    async def fake_api_request(api, path, method="GET", body=None, params=None, read_only=False):
         calls.append({"api": api, "path": path, "method": method, "body": body})
         return {"id": "n1", "status": "REQUESTED"} if method == "POST" else {"id": "n1"}
 

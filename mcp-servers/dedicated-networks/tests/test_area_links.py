@@ -23,6 +23,7 @@ from camara.geo import (
 )
 from camara.models import ResponseFormat
 from camara.tools import areas as areas_module
+from tests.tool_results import text_of
 
 GEOJSON_PREFIX = "https://geojson.io/#data=data:application/json,"
 
@@ -146,7 +147,7 @@ def _patch_api(monkeypatch, payload):
 
 def test_retrieve_json_gives_each_area_a_url_and_a_combined_url(monkeypatch):
     _patch_api(monkeypatch, [CIRCLE_AREA, POLYGON_AREA])
-    fn = _tool("camara_retrieve_service_areas").fn
+    fn = text_of(_tool("camara_retrieve_service_areas").fn)
 
     result = json.loads(asyncio.run(fn(response_format=ResponseFormat.JSON)))
 
@@ -156,7 +157,7 @@ def test_retrieve_json_gives_each_area_a_url_and_a_combined_url(monkeypatch):
 
 def test_retrieve_json_flags_areas_without_a_link(monkeypatch):
     _patch_api(monkeypatch, [CIRCLE_AREA, BROKEN_AREA])
-    fn = _tool("camara_retrieve_service_areas").fn
+    fn = text_of(_tool("camara_retrieve_service_areas").fn)
 
     result = json.loads(asyncio.run(fn(response_format=ResponseFormat.JSON)))
 
@@ -167,7 +168,7 @@ def test_retrieve_json_flags_areas_without_a_link(monkeypatch):
 
 def test_retrieve_json_without_areas_has_no_combined_url(monkeypatch):
     _patch_api(monkeypatch, [])
-    fn = _tool("camara_retrieve_service_areas").fn
+    fn = text_of(_tool("camara_retrieve_service_areas").fn)
 
     result = json.loads(asyncio.run(fn(response_format=ResponseFormat.JSON)))
 
@@ -176,7 +177,7 @@ def test_retrieve_json_without_areas_has_no_combined_url(monkeypatch):
 
 def test_retrieve_markdown_links_every_area_and_the_combined_map(monkeypatch):
     _patch_api(monkeypatch, [CIRCLE_AREA, POLYGON_AREA])
-    fn = _tool("camara_retrieve_service_areas").fn
+    fn = text_of(_tool("camara_retrieve_service_areas").fn)
 
     out = asyncio.run(fn())
 
@@ -186,7 +187,7 @@ def test_retrieve_markdown_links_every_area_and_the_combined_map(monkeypatch):
 
 def test_retrieve_markdown_single_area_has_no_redundant_combined_link(monkeypatch):
     _patch_api(monkeypatch, [CIRCLE_AREA])
-    fn = _tool("camara_retrieve_service_areas").fn
+    fn = text_of(_tool("camara_retrieve_service_areas").fn)
 
     out = asyncio.run(fn())
 
@@ -196,7 +197,7 @@ def test_retrieve_markdown_single_area_has_no_redundant_combined_link(monkeypatc
 
 def test_retrieve_markdown_states_when_an_area_has_no_link(monkeypatch):
     _patch_api(monkeypatch, [BROKEN_AREA])
-    fn = _tool("camara_retrieve_service_areas").fn
+    fn = text_of(_tool("camara_retrieve_service_areas").fn)
 
     out = asyncio.run(fn())
 
@@ -206,7 +207,7 @@ def test_retrieve_markdown_states_when_an_area_has_no_link(monkeypatch):
 
 def test_get_area_json_and_markdown_both_carry_the_link(monkeypatch):
     _patch_api(monkeypatch, CIRCLE_AREA)
-    fn = _tool("camara_get_area").fn
+    fn = text_of(_tool("camara_get_area").fn)
     area_id = CIRCLE_AREA["id"]
 
     as_json = json.loads(
@@ -220,7 +221,7 @@ def test_get_area_json_and_markdown_both_carry_the_link(monkeypatch):
 
 def test_get_area_json_flags_missing_link(monkeypatch):
     _patch_api(monkeypatch, BROKEN_AREA)
-    fn = _tool("camara_get_area").fn
+    fn = text_of(_tool("camara_get_area").fn)
 
     out = json.loads(
         asyncio.run(fn(areaId="broken-1", response_format=ResponseFormat.JSON))
@@ -243,7 +244,7 @@ def test_picker_areas_carry_links(monkeypatch):
     apps = Apps()
     apps.add_html_resource(picker_module.AREA_PICKER_URI, "<html></html>")
     picker_module.register_picker_tool(apps)
-    fn = next(b.fn for b in apps.tools() if b.fn.__name__ == "camara_pick_location")
+    fn = text_of(next(b.fn for b in apps.tools() if b.fn.__name__ == "camara_pick_location"))
 
 
     result = json.loads(asyncio.run(fn()))
