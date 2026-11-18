@@ -12,8 +12,11 @@ is straightforward to unit test.
 Exported:
   area_bounds(area)          → bbox of one area's geometry, or None if malformed
   combined_bounds(areas)     → bbox covering every area, or None if there are none
-  area_geojson_url(area)     → geojson.io link for one area, or None if malformed
-  combined_geojson_url(areas)→ geojson.io link drawing all areas, or None
+  area_geojson_url(area)     → map link for one area, or None if malformed (short
+                               when the local link server runs, see maplinks.py)
+  combined_geojson_url(areas)→ map link drawing all areas, or None
+  embedded_area_url(area), embedded_combined_url(areas)
+                             → the geojson.io links with the geometry embedded
   with_geojson_url(area)     → area dict + 'geojsonUrl' (or 'geojsonNote' if malformed)
   GEOJSON_LINK_RULE          → instruction telling the model to always show the link
 """
@@ -176,10 +179,29 @@ def geojson_url(geojson: Dict[str, Any]) -> str:
     return "https://geojson.io/#data=data:application/json," + quote(payload, safe="")
 
 
-def area_geojson_url(area: Dict[str, Any]) -> Optional[str]:
-    """geojson.io URL visualising one area, or None if its geometry is unusable."""
+def embedded_area_url(area: Dict[str, Any]) -> Optional[str]:
+    """geojson.io URL with the area's geometry embedded, or None if its geometry is unusable."""
     feature = area_to_geojson(area)
     return geojson_url(feature) if feature else None
+
+
+def embedded_combined_url(areas: List[Dict[str, Any]]) -> Optional[str]:
+    """geojson.io URL with every drawable area embedded, or None if there are none."""
+    collection = areas_to_geojson(areas)
+    return geojson_url(collection) if collection["features"] else None
+
+
+def area_geojson_url(area: Dict[str, Any]) -> Optional[str]:
+    """The map link for one area, or None if its geometry is unusable.
+
+    A short link resolved by the gateway when the local link server runs
+    (CAMARA_MAP_LINKS=local, camara/maplinks.py), else the embedded URL.
+    """
+    from camara import maplinks
+
+    if area_to_geojson(area) is None:
+        return None
+    return maplinks.area_link(area.get("id")) or embedded_area_url(area)
 
 
 # Shown in place of a link when an area's geometry cannot be drawn, so the
@@ -196,9 +218,13 @@ def with_geojson_url(area: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def combined_geojson_url(areas: List[Dict[str, Any]]) -> Optional[str]:
-    """geojson.io URL drawing every drawable area at once, or None if there are none."""
-    collection = areas_to_geojson(areas)
-    return geojson_url(collection) if collection["features"] else None
+    """The map link drawing every drawable area at once, or None if there are none."""
+    from camara import maplinks
+
+    drawable = [a for a in areas if area_to_geojson(a) is not None]
+    if not drawable:
+        return None
+    return maplinks.combined_link([a.get("id") for a in drawable]) or embedded_combined_url(drawable)
 
 
 def combined_bounds(areas: List[Dict[str, Any]]) -> Optional[Bounds]:

@@ -41,6 +41,7 @@ from camara.prompts         import register_prompts
 from camara.ui              import build_apps_extension
 from camara.geo             import GEOJSON_LINK_RULE
 from camara.config          import startup_line
+from camara                 import config, maplinks
 from camara.flat            import forbid_unknown_arguments
 
 # Sent to the host at initialisation, so it applies to every tool and prompt.
@@ -80,4 +81,9 @@ register_prompts(mcp)
 # ── Start the server ───────────────────────────────────────────────────────────
 if __name__ == "__main__":
     print(startup_line(), file=sys.stderr, flush=True)   # standard error: standard output carries the protocol
+    # Short map links resolved on demand (camara/maplinks.py); embedded links otherwise.
+    if config.MAP_LINKS == "local":
+        url = maplinks.start()
+        if url:
+            print(f"[camara-mcp] Map links served at {url}/map/<areaId>", file=sys.stderr, flush=True)
     mcp.run()
