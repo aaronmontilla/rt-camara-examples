@@ -51,6 +51,17 @@ TOKEN_AUTH: str = os.environ.get("CAMARA_TOKEN_AUTH", "basic")
 # XYZ tile template, e.g. https://tile.openstreetmap.org/{z}/{x}/{y}.png
 MAP_TILE_URL: str = os.environ.get("CAMARA_MAP_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png")
 
+# ─── Service-area map links (see camara/maplinks.py) ──────────────────────────
+# embedded: geojson.io links with the geometry in the URL (default).
+# local:    short links served by the gateway on MAP_HOST:MAP_PORT, resolved
+#           on demand from the API, so the model never has to copy a geometry.
+MAP_LINKS: str = os.environ.get("CAMARA_MAP_LINKS", "embedded").strip().lower()
+MAP_HOST: str = os.environ.get("CAMARA_MAP_HOST", "127.0.0.1")
+try:
+    MAP_PORT: int = int(os.environ.get("CAMARA_MAP_PORT", "8765"))
+except ValueError:
+    MAP_PORT = 8765
+
 # ─── Sub-API base paths ────────────────────────────────────────────────────────
 # Each path is appended to API_ROOT to form the full base URL for that API.
 # Example: http://localhost:9091/dedicated-network/vwip/networks
