@@ -41,7 +41,7 @@ from camara.prompts         import register_prompts
 from camara.ui              import build_apps_extension
 from camara.geo             import GEOJSON_LINK_RULE
 from camara.config          import startup_line
-from camara                 import config, maplinks
+from camara                 import config, maplinks, plain
 from camara.flat            import forbid_unknown_arguments
 
 # Sent to the host at initialisation, so it applies to every tool and prompt.
@@ -62,7 +62,8 @@ ENABLE_MAP_PICKER = False
 
 mcp = FastMCP(
     "CAMARA Dedicated Networks",
-    instructions=SERVER_INSTRUCTIONS,
+    # CAMARA_CONTRACT=plain is an evaluation baseline (camara/plain.py).
+    instructions=plain.PLAIN_INSTRUCTIONS if plain.contract_plain() else SERVER_INSTRUCTIONS,
     extensions=[build_apps_extension()] if ENABLE_MAP_PICKER else [],
 )
 
@@ -76,7 +77,11 @@ register_area_tools(mcp)
 forbid_unknown_arguments(mcp._tool_manager.list_tools())
 
 # ── Register workflow guidance prompts ────────────────────────────────────────
-register_prompts(mcp)
+# The plain baseline has neither prompts nor descriptions beyond one line.
+if plain.contract_plain():
+    plain.apply(mcp._tool_manager.list_tools())
+else:
+    register_prompts(mcp)
 
 # ── Start the server ───────────────────────────────────────────────────────────
 if __name__ == "__main__":

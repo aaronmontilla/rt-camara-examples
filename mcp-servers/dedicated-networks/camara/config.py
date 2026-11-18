@@ -62,6 +62,13 @@ try:
 except ValueError:
     MAP_PORT = 8765
 
+# ─── Evaluation baselines (see camara/plain.py) ───────────────────────────────
+# CONTRACT=plain: one-line descriptions, no guidance, raw API responses, no prompts.
+# ERRORS=raw: API errors returned as they came instead of translated messages.
+CONTRACT: str = os.environ.get("CAMARA_CONTRACT", "full").strip().lower()
+# The plain contract implies raw errors unless CAMARA_ERRORS says otherwise.
+ERRORS: str = os.environ.get("CAMARA_ERRORS", "raw" if CONTRACT == "plain" else "translated").strip().lower()
+
 # ─── Sub-API base paths ────────────────────────────────────────────────────────
 # Each path is appended to API_ROOT to form the full base URL for that API.
 # Example: http://localhost:9091/dedicated-network/vwip/networks

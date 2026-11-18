@@ -44,7 +44,7 @@ from mcp_types import CallToolResult, TextContent
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic_core import PydanticUndefined
 
-from camara import telemetry
+from camara import plain, telemetry
 
 FLAT_ATTRIBUTE = "__camara_flat_model__"
 
@@ -79,6 +79,9 @@ def flat_arguments(fn: Callable[[Any], Awaitable[str]]) -> Callable[..., Awaitab
             # Checks that span several fields (e.g. the CreateNetworkInput oneOf) run here, after MCP has
             # validated each argument. MCP prefixes "Error executing tool <name>: ", as for argument errors,
             # so the model sees the reason instead of a bare "Error executing tool".
+            # The plain evaluation baseline gives a neutral validator message instead (camara/plain.py).
+            if plain.contract_plain():
+                raise ToolError(plain.neutral_validation_message(exc)) from exc
             raise ToolError(str(exc)) from exc
 
         # Record the CAMARA API requests the tool makes and return them in the result's _meta
@@ -86,6 +89,9 @@ def flat_arguments(fn: Callable[[Any], Awaitable[str]]) -> Callable[..., Awaitab
         token = telemetry.start()
         try:
             text = await fn(params)
+        except plain.RawResult as raw:
+            # Evaluation baseline (CAMARA_CONTRACT=plain): the API's response as it came, instead of the tool's text.
+            text = plain.raw_text(raw.result)
         except ToolError as exc:
             recording = telemetry.stop(token)
             return CallToolResult(

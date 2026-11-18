@@ -120,6 +120,8 @@ Is access <accessId> granted yet?
 | `CAMARA_TOKEN_AUTH` | How the client id and secret are sent: `basic` (HTTP Basic) or `body` (form fields) | `basic` |
 | `CAMARA_MAP_LINKS` | `embedded`: map links carry the geometry in the URL (long). `local`: short links such as `http://127.0.0.1:8765/map/<areaId>`, served by the server itself, which fetches the area from the API when the link is opened and redirects to the same geojson.io view; nothing is stored. Falls back to `embedded` if the port is taken | `embedded` |
 | `CAMARA_MAP_HOST`, `CAMARA_MAP_PORT` | Address of the short-link server (`local` mode). Loopback only: any other host is refused (links stay embedded), since the server fetches areas with the gateway's credentials; it also answers only requests addressed to that host name | `127.0.0.1`, `8765` |
+| `CAMARA_CONTRACT` | `full` (default). `plain`: evaluation baseline approximating a wrapper generated from the CAMARA r2.2 OpenAPI files: operation summaries and parameter descriptions verbatim from the specification, its constraints, raw API responses, no guidance, no map links, no prompts (see `camara/plain.py`) | `full` |
+| `CAMARA_ERRORS` | `translated`. `raw`: evaluation baseline returning API errors as they came (still MCP tool errors). Defaults to `raw` with `CAMARA_CONTRACT=plain` | `translated` (`raw` if plain) |
 | `CAMARA_MAP_TILE_URL` | XYZ tile URL template for the `camara_pick_location` map (only used if the map picker is re-enabled) | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` |
 
 ### Authentication
@@ -212,6 +214,8 @@ camara/
                             returned in the result's _meta.
   models.py                 Pydantic input models shared across tools.
   formatters.py             Turns API JSON responses into readable Markdown.
+  plain.py                  Evaluation baselines (CAMARA_CONTRACT=plain,
+                            CAMARA_ERRORS=raw).
   maplinks.py               Short map links (CAMARA_MAP_LINKS=local): a local
                             HTTP server that resolves /map/<areaId> on demand.
   geo.py                    Geometry helpers: bounding boxes and GeoJSON /
@@ -247,7 +251,7 @@ The field names follow the backend telemetry read by the
 [6G AI Traffic Testbed](https://github.com/5G-MAG/6G-Testbed), which stores them with each tool call. Neither the
 token nor the client secret appears in it. The text the model reads is unchanged.
 
-The test suite has 151 cases:
+The test suite has 165 cases:
 
 ```bash
 pip install -r requirements-dev.txt

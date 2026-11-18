@@ -16,7 +16,7 @@ from typing import Any, Dict, Optional
 import httpx
 from mcp.server.mcpserver.exceptions import ToolError
 
-from camara import telemetry
+from camara import plain, telemetry
 from camara.auth import TokenError, TokenProvider
 from camara.config import API_ROOT, API_PATHS
 
@@ -142,6 +142,8 @@ async def api_request(
     if resent and method.upper() == "DELETE" and response.status_code == 404:
         # The first DELETE may have been executed before its response was lost:
         # the resource being gone is the outcome that was asked for.
+        if plain.contract_plain():
+            raise plain.RawResult(plain.EMPTY)
         return None
     if response.status_code == 401 and _token_provider.renewable:
         # The token may have expired or been revoked early: get a new one, once.
@@ -149,9 +151,11 @@ async def api_request(
         response = await send()
     response.raise_for_status()
 
-    if response.status_code == 204:   # DELETE returns no body
-        return None
-    return response.json()
+    result = None if response.status_code == 204 else response.json()   # DELETE returns no body
+    if plain.contract_plain():
+        # Evaluation baseline: the response goes back to the model as it came, before the tool formats it.
+        raise plain.RawResult(plain.EMPTY if response.status_code == 204 else result)
+    return result
 
 
 # ─── Error handler ─────────────────────────────────────────────────────────────
@@ -171,7 +175,13 @@ def handle_error(e: Exception) -> str:
     """Convert any exception into a clear, actionable error message.
 
     Tools raise it wrapped in a ToolError (see tool_error) instead of crashing.
+    With CAMARA_ERRORS=raw (evaluation baseline, camara/plain.py) it returns the
+    HTTP status and the API's error body, or the exception, as they came.
     """
+    if plain.errors_raw():
+        if isinstance(e, httpx.HTTPStatusError):
+            return f"HTTP {e.response.status_code} {e.response.reason_phrase}: {e.response.text[:2000]}"
+        return f"{type(e).__name__}: {e}"
     if isinstance(e, httpx.HTTPStatusError):
         status = e.response.status_code
 
